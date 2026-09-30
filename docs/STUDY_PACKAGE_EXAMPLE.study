@@ -16,7 +16,7 @@
       "id": "economia-slide",
       "name": "Lezione 1.pdf",
       "type": "pdf",
-      "pageCount": 4
+      "pageCount": 6
     }
   ],
   "topics": [
@@ -46,13 +46,63 @@
       "examQuestionIds": []
     },
     {
+      "id": "economia-index",
+      "materialId": "economia-slide",
+      "name": "Indice",
+      "pageType": "index",
+      "studyable": false,
+      "slideRange": {
+        "from": 2,
+        "to": 2
+      },
+      "difficulty": 1,
+      "importance": 1,
+      "estimatedMinutes": 0,
+      "explanations": {
+        "simple": "Indice del materiale, non incluso nel piano di studio.",
+        "normal": "Indice del materiale, non incluso nel piano di studio.",
+        "deep": "Indice del materiale, non incluso nel piano di studio."
+      },
+      "summary": "Indice del materiale, non incluso nel piano di studio.",
+      "keyConcepts": [],
+      "examples": [],
+      "quizIds": [],
+      "flashcardIds": [],
+      "examQuestionIds": []
+    },
+    {
+      "id": "economia-separator",
+      "materialId": "economia-slide",
+      "name": "Titolo della lezione",
+      "pageType": "separator",
+      "studyable": false,
+      "slideRange": {
+        "from": 3,
+        "to": 3
+      },
+      "difficulty": 1,
+      "importance": 1,
+      "estimatedMinutes": 0,
+      "explanations": {
+        "simple": "Separatore della sezione, non incluso nel piano di studio.",
+        "normal": "Separatore della sezione, non incluso nel piano di studio.",
+        "deep": "Separatore della sezione, non incluso nel piano di studio."
+      },
+      "summary": "Separatore della sezione, non incluso nel piano di studio.",
+      "keyConcepts": [],
+      "examples": [],
+      "quizIds": [],
+      "flashcardIds": [],
+      "examQuestionIds": []
+    },
+    {
       "id": "economia-costi",
       "materialId": "economia-slide",
       "name": "Costi fissi e variabili",
       "pageType": "content",
       "slideRange": {
-        "from": 2,
-        "to": 4
+        "from": 4,
+        "to": 6
       },
       "difficulty": 2,
       "importance": 5,
@@ -97,7 +147,7 @@
       "correctAnswer": 1,
       "explanation": "L’affitto non varia direttamente con le unità prodotte nel breve periodo.",
       "slideRefs": [
-        2
+        4
       ]
     }
   ],
@@ -108,8 +158,8 @@
       "front": "Come si calcola il costo totale?",
       "back": "Costo fisso più costo variabile.",
       "slideRefs": [
-        2,
-        3
+        4,
+        5
       ]
     }
   ],
@@ -125,9 +175,9 @@
         "Fornisce un esempio coerente"
       ],
       "slideRefs": [
-        2,
-        3,
-        4
+        4,
+        5,
+        6
       ]
     }
   ]

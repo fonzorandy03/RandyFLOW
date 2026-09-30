@@ -36,6 +36,8 @@ Ogni flashcard deve contenere id, topicId, front, back, slideRefs.
 Ogni domanda d'esame deve contenere id, topicId, prompt, modelAnswer, evaluationCriteria, slideRefs.
 
 CONTROLLO FINALE
+- Prima di accettare explanations.simple chiediti: "Uno studente che parte da zero capirebbe davvero questa pagina senza una spiegazione orale del professore?" Se NO, approfondisci.
+- Prima di accettare summary chiediti: "Uno studente potrebbe usare questo riassunto per ripassare seriamente questa pagina prima dell'esame?" Se NO, amplialo.
 - Il JSON è parsabile e conforme allo schema Study Package v1.0.
 - pageCount coincide con il PDF e ogni pagina ha un solo topic.
 - La classificazione deriva dal significato e dall'aspetto della pagina.

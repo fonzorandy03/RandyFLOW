@@ -43,7 +43,7 @@ class BackendIntegrationTest {
   @Test void importsAndUpdatesPackageWithoutLosingProgress() throws Exception {
     var preview = packages.preview(example());
     packages.importPackage(preview.studyPackage());
-    core.complete("economia-slide", 2, null);
+    core.complete("economia-slide", 4, null);
     var mastery = data.masteryById("economia-costi");
     mastery.score = 72;
     data.save(mastery);
@@ -73,12 +73,12 @@ class BackendIntegrationTest {
     packages.importPackage(packages.preview(example()).studyPackage());
     var sessions = planner.sessions("economia");
     assertThat(sessions).extracting(it.randyflow.dto.ApiDtos.SessionDto::slideFrom)
-        .containsExactlyInAnyOrder(2, 3, 4);
+        .containsExactlyInAnyOrder(4, 5, 6);
     assertThat(core.exam("economia").totalSlides()).isEqualTo(3);
     assertThat(core.material("economia-slide").studyablePages()).isEqualTo(3);
     core.complete("economia-slide", 1, null);
     assertThat(core.material("economia-slide").pagesRead()).isZero();
-    core.complete("economia-slide", 2, null);
+    core.complete("economia-slide", 4, null);
     assertThat(core.material("economia-slide").pagesRead()).isEqualTo(1);
     assertThat(learning.mastery("economia").stream().map(it.randyflow.dto.ApiDtos.MasteryDto::id).toList())
         .containsExactly("economia-costi");

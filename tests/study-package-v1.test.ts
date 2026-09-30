@@ -13,7 +13,7 @@ test('normalizes page classification and supports old packages', () => {
   assert.equal(current.topics[0].pageType, 'cover')
   assert.equal(current.topics[0].studyable, false)
   const old = JSON.parse(source)
-  old.topics = old.topics.slice(1)
+  old.topics = [old.topics.find((topic: { id: string }) => topic.id === 'economia-costi')]
   delete old.topics[0].pageType
   delete old.topics[0].studyable
   const parsed = parseStudyPackage(JSON.stringify(old))
