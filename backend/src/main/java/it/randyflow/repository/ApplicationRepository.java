@@ -18,4 +18,20 @@ import it.randyflow.domain.*; import jakarta.persistence.EntityManager; import j
  public int minutesSince(LocalDate date,Collection<String> examIds){if(examIds.isEmpty())return 0;return em.createQuery("select coalesce(sum(l.minutes),0) from StudyLogEntity l where l.logDate>=:date and l.examId in :ids",Long.class).setParameter("date",date).setParameter("ids",examIds).getSingleResult().intValue();}
  public UserProfileEntity profile(String id){return em.find(UserProfileEntity.class,id);} public UserPreferenceEntity preferences(String id){return em.find(UserPreferenceEntity.class,id);}
  public void deleteFuturePlan(String examId){em.createQuery("delete from StudyTaskEntity t where t.sessionId in (select s.id from StudySessionEntity s where s.examId=:exam and s.sessionDate>=:today)").setParameter("exam",examId).setParameter("today",LocalDate.now()).executeUpdate();em.createQuery("delete from StudySessionEntity s where s.examId=:exam and s.sessionDate>=:today").setParameter("exam",examId).setParameter("today",LocalDate.now()).executeUpdate();}
+ public void deleteExamGraph(String examId){
+  String[] statements={
+   "delete from study_tasks where session_id in (select id from study_sessions where exam_id=:exam)",
+   "delete from study_sessions where exam_id=:exam","delete from study_plans where exam_id=:exam",
+   "delete from quiz_attempts where exam_id=:exam","delete from flashcard_reviews where exam_id=:exam",
+   "delete from exam_simulations where exam_id=:exam","delete from topic_mastery where exam_id=:exam",
+   "delete from study_logs where exam_id=:exam",
+   "delete from quizzes where topic_id in (select t.id from topics t join study_materials m on t.material_id=m.id where m.exam_id=:exam)",
+   "delete from flashcards where topic_id in (select t.id from topics t join study_materials m on t.material_id=m.id where m.exam_id=:exam)",
+   "delete from exam_questions where topic_id in (select t.id from topics t join study_materials m on t.material_id=m.id where m.exam_id=:exam)",
+   "delete from topics where material_id in (select id from study_materials where exam_id=:exam)",
+   "delete from study_packages where exam_id=:exam","delete from study_materials where exam_id=:exam"
+  };
+  for(String statement:statements)em.createNativeQuery(statement).setParameter("exam",examId).executeUpdate();
+  em.clear();
+ }
 }

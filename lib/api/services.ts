@@ -147,6 +147,16 @@ export const examsApi = {
       return exam
     }, 300)
   },
+  delete: (id: string): Promise<void> => {
+    if (!USE_MOCKS) return http.delete(`/exams/${id}`)
+    return mockResponse(() => {
+      const index = db.exams.findIndex((exam) => exam.id === id)
+      if (index < 0) throw new Error('Esame non trovato')
+      db.exams.splice(index, 1)
+      for (let i = documents.length - 1; i >= 0; i--) if (documents[i].examId === id) documents.splice(i, 1)
+      for (let i = db.sessions.length - 1; i >= 0; i--) if (db.sessions[i].examId === id) db.sessions.splice(i, 1)
+    })
+  },
 }
 
 export const planApi = {
@@ -494,8 +504,9 @@ export const studyPackageApi = {
             parseStudyPackage(source),
           )
           .then((result) => ({ package: result.studyPackage, summary: result.summary })),
-  import: (pkg: StudyPackage): Promise<StudyPackageSummary> => {
-    if (!USE_MOCKS) return http.post('/study-packages/import', pkg)
+  import: (pkg: StudyPackage, examId?: string): Promise<StudyPackageSummary> => {
+    if (!USE_MOCKS)
+      return http.post(`/study-packages/import${examId ? `?examId=${encodeURIComponent(examId)}` : ''}`, pkg)
     return mockResponse(() => {
       const current = packageRevision(pkg.packageId)
       if (current !== undefined && pkg.revision < current)

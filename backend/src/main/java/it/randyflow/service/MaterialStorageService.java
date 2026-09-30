@@ -72,6 +72,23 @@ public class MaterialStorageService {
     };
   }
 
+  public void delete(String reference) {
+    if (reference == null || reference.isBlank()) return;
+    try {
+      if (!reference.startsWith("supabase:")) {
+        Files.deleteIfExists(Paths.get(reference));
+        return;
+      }
+      String objectKey = reference.substring("supabase:".length());
+      HttpRequest request = HttpRequest.newBuilder(storageUri("/object/", objectKey))
+          .header("Authorization", "Bearer " + serviceRoleKey).header("apikey", serviceRoleKey)
+          .DELETE().build();
+      send(request, HttpResponse.BodyHandlers.discarding());
+    } catch (IOException e) {
+      throw new IllegalStateException("Impossibile eliminare il PDF", e);
+    }
+  }
+
   private URI storageUri(String operation, String objectKey) {
     return URI.create(supabaseUrl + "/storage/v1" + operation + bucket + "/" + objectKey);
   }

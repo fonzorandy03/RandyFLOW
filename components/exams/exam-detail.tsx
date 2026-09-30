@@ -1,8 +1,9 @@
 'use client'
 
 import Button from '@mui/material/Button'
-import { ArrowLeft, BookOpen, CalendarDays, FileText, Layers, ListChecks, SearchX } from 'lucide-react'
+import { ArrowLeft, BookOpen, CalendarDays, FileText, Layers, ListChecks, SearchX, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { PageContainer } from '@/components/layout/app-shell'
 import { MasteryIndicator } from '@/components/common/mastery-indicator'
@@ -24,6 +25,8 @@ import {
 } from '@/lib/date'
 import { useAdjustments, useDocuments, useExams, useMastery, useSessions } from '@/lib/hooks'
 import { studyHref } from '@/lib/routes'
+import { examsApi } from '@/lib/api/services'
+import { mutate as mutateCache } from 'swr'
 
 export function ExamDetail({ id }: { id: string }) {
   const { data: exams, error, isLoading, mutate } = useExams()
@@ -32,6 +35,8 @@ export function ExamDetail({ id }: { id: string }) {
   const { data: mastery } = useMastery(id)
   const { data: adjustments } = useAdjustments()
   const [availabilityOpen, setAvailabilityOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const router = useRouter()
 
   if (error)
     return (
@@ -116,6 +121,25 @@ export function ExamDetail({ id }: { id: string }) {
                 startIcon={<CalendarDays className="size-4" />}
               >
                 Planner
+              </Button>
+              <Button
+                color="error"
+                variant="outlined"
+                disabled={deleting}
+                startIcon={<Trash2 className="size-4" />}
+                onClick={async () => {
+                  if (!window.confirm(`Eliminare definitivamente l’esame “${exam.name}” e tutti i dati collegati?`)) return
+                  setDeleting(true)
+                  try {
+                    await examsApi.delete(exam.id)
+                    await mutateCache('exams')
+                    router.push('/esami')
+                  } finally {
+                    setDeleting(false)
+                  }
+                }}
+              >
+                {deleting ? 'Eliminazione…' : 'Elimina esame'}
               </Button>
             </div>
           </header>

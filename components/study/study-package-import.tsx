@@ -5,14 +5,15 @@ import { mutate } from 'swr'
 import { studyPackageApi } from '@/lib/api/services'
 import { refreshPlanData } from '@/lib/hooks'
 import { StudyPackageValidationError } from '@/lib/study-package'
-import type { StudyPackage, StudyPackageSummary } from '@/lib/types'
+import type { Exam, StudyPackage, StudyPackageSummary } from '@/lib/types'
 
-export function StudyPackageImport() {
+export function StudyPackageImport({ exams }: { exams: Exam[] }) {
   const input = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ package: StudyPackage; summary: StudyPackageSummary }>()
   const [issues, setIssues] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [examId, setExamId] = useState('')
   const select = async (file?: File) => {
     setPreview(undefined)
     setIssues([])
@@ -24,7 +25,10 @@ export function StudyPackageImport() {
     }
     setBusy(true)
     try {
-      setPreview(await studyPackageApi.preview(await file.text()))
+      const result = await studyPackageApi.preview(await file.text())
+      setPreview(result)
+      const exact = exams.find((exam) => exam.name.toLowerCase() === result.package.exam.name.toLowerCase())
+      setExamId(exact?.id ?? (exams.length === 1 ? exams[0].id : ''))
     } catch (error) {
       setIssues(
         error instanceof StudyPackageValidationError
@@ -37,9 +41,13 @@ export function StudyPackageImport() {
   }
   const install = async () => {
     if (!preview) return
+    if (exams.length && !examId) {
+      setIssues(['Scegli l’esame al quale collegare questo package.'])
+      return
+    }
     setBusy(true)
     try {
-      const result = await studyPackageApi.import(preview.package)
+      const result = await studyPackageApi.import(preview.package, examId || undefined)
       await refreshPlanData()
       await mutate(
         (key) =>
@@ -104,6 +112,21 @@ export function StudyPackageImport() {
               </span>
             ))}
           </div>
+          {exams.length > 0 && (
+            <label className="mt-4 block text-sm font-medium">
+              Collega il package all’esame
+              <select
+                className="mt-2 block w-full rounded-lg border bg-card p-3"
+                value={examId}
+                onChange={(event) => setExamId(event.target.value)}
+              >
+                <option value="">Scegli un esame</option>
+                {exams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>{exam.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <Button className="mt-4" variant="contained" onClick={install} disabled={busy}>
             {preview.summary.isUpdate ? 'Aggiorna package' : 'Importa package'}
           </Button>

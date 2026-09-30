@@ -43,7 +43,7 @@ export function StudyView() {
           description="Riprendi il filo, una pagina alla volta."
         />
         <StudyPackagePromptCard />
-        <StudyPackageImport />
+        <StudyPackageImport exams={exams.data} />
         {today.data && (
           <section className="rounded-2xl border border-border bg-card p-6">
             <p className="text-xs text-primary">ESAME CORRENTE</p>

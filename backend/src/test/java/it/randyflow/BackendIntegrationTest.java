@@ -113,4 +113,19 @@ class BackendIntegrationTest {
     String token=new com.fasterxml.jackson.databind.ObjectMapper().readTree(body).get("token").asText();
     secureMvc.perform(get("/api/v1/exams").header("Authorization","Bearer "+token)).andExpect(status().isOk()).andExpect(content().json("[]"));
   }
+
+  @Test void attachesPackageToExistingExamAndDeletesTheWholeExam() throws Exception {
+    packages.importPackage(packages.preview(example()).studyPackage());
+    var created=core.create(new it.randyflow.dto.ApiDtos.NewExam("ISTA",java.time.LocalDate.now().plusMonths(2),"Piano personale",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("ISTA_Dispensa_Capitoli_1-4.pdf",40)),java.util.Map.of(1,60),java.util.List.of(),7));
+    String materialId=created.documentIds().get(0);
+    var attached=packages.importPackage(packages.preview(example()).studyPackage(),created.id());
+    assertThat(attached.examId()).isEqualTo(created.id());
+    assertThat(core.exams()).hasSize(1);
+    assertThat(packages.getByExam(created.id()).materials().get(0).id()).isEqualTo(materialId);
+    assertThat(core.exam(created.id()).name()).isEqualTo("ISTA");
+
+    core.deleteExam(created.id());
+    assertThat(core.exams()).isEmpty();
+    assertThatThrownBy(()->core.exam(created.id())).isInstanceOf(ApiException.class);
+  }
 }
