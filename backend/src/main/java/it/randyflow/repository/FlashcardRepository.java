@@ -1,0 +1,1 @@
+package it.randyflow.repository; import it.randyflow.domain.FlashcardEntity; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface FlashcardRepository extends JpaRepository<FlashcardEntity,String> { List<FlashcardEntity> findByTopicIdIn(Collection<String> ids); void deleteByTopicIdIn(Collection<String> ids); }

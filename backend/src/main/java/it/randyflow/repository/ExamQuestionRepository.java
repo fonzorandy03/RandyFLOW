@@ -1,0 +1,1 @@
+package it.randyflow.repository; import it.randyflow.domain.ExamQuestionEntity; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface ExamQuestionRepository extends JpaRepository<ExamQuestionEntity,String> { List<ExamQuestionEntity> findByTopicIdIn(Collection<String> ids); void deleteByTopicIdIn(Collection<String> ids); }

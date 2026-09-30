@@ -1,0 +1,1 @@
+package it.randyflow.repository; import it.randyflow.domain.TopicEntity; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface TopicRepository extends JpaRepository<TopicEntity,String> { List<TopicEntity> findByMaterialIdIn(Collection<String> ids); void deleteByMaterialIdIn(Collection<String> ids); }

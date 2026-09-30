@@ -1,0 +1,1 @@
+package it.randyflow.repository; import it.randyflow.domain.StudyMaterialEntity; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface StudyMaterialRepository extends JpaRepository<StudyMaterialEntity,String> { List<StudyMaterialEntity> findByExamId(String examId); }

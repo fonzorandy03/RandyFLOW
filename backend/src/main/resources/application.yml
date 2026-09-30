@@ -1,0 +1,19 @@
+spring:
+  application.name: randyflow-backend
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/randyflow}
+    username: ${DATABASE_USERNAME:randyflow}
+    password: ${DATABASE_PASSWORD:randyflow}
+  jpa:
+    open-in-view: false
+    hibernate.ddl-auto: validate
+  servlet.multipart:
+    max-file-size: 50MB
+    max-request-size: 50MB
+  flyway.locations: classpath:db/migration
+springdoc:
+  swagger-ui.path: /swagger-ui.html
+  api-docs.path: /v3/api-docs
+randyflow:
+  storage-path: ${STORAGE_PATH:./storage}
+  cors-origin: ${CORS_ORIGIN:http://localhost:3000}
