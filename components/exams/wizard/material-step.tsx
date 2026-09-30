@@ -3,6 +3,7 @@
 import { FileText, Trash2, Upload } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { studyApi } from '@/lib/api/services'
 
 export interface DraftDocument {
   id: string
@@ -18,16 +19,6 @@ function sizeLabel(bytes: number) {
     : `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
-/** Counts page objects in the raw PDF bytes; good enough for planning and editable afterwards. */
-async function countPdfPages(file: File) {
-  try {
-    const text = new TextDecoder('latin1').decode(await file.arrayBuffer())
-    const matches = text.match(/\/Type\s*\/Page[^s]/g)
-    if (matches?.length) return matches.length
-  } catch {}
-  return Math.max(10, Math.round(file.size / 60_000))
-}
-
 export function MaterialStep({
   documents,
   onChange,
@@ -39,23 +30,27 @@ export function MaterialStep({
   const inputId = useId()
   const [dragging, setDragging] = useState(false)
   const [reading, setReading] = useState(false)
+  const [error, setError] = useState('')
 
   const add = async (files: FileList | null) => {
     if (!files?.length) return
     setReading(true)
-    const added = await Promise.all(
-      Array.from(files)
-        .filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
-        .map(async (f) => ({
-          id: `${f.name}-${f.size}-${Date.now()}`,
-          name: f.name,
-          pages: await countPdfPages(f),
-          sizeLabel: sizeLabel(f.size),
-          file: f,
-        })),
-    )
-    setReading(false)
-    onChange([...documents, ...added])
+    setError('')
+    try {
+      const added = await Promise.all(
+        Array.from(files)
+          .filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+          .map(async (f) => {
+            const inspected = await studyApi.inspectPdf(f)
+            return { id: `${f.name}-${f.size}-${Date.now()}`, name: f.name, pages: inspected.pages, sizeLabel: sizeLabel(f.size), file: f }
+          }),
+      )
+      onChange([...documents, ...added])
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Non è stato possibile leggere il PDF.')
+    } finally {
+      setReading(false)
+    }
   }
 
   const addSample = () =>
@@ -90,7 +85,7 @@ export function MaterialStep({
           {reading ? 'Lettura del file…' : 'Trascina qui i PDF o scegli un file'}
         </span>
         <span className="text-xs text-muted-foreground">
-          Solo PDF · il file resta sul tuo dispositivo in questa demo
+          Solo PDF · il numero di pagine viene letto direttamente dal documento
         </span>
         <input
           ref={inputRef}
@@ -105,6 +100,7 @@ export function MaterialStep({
           }}
         />
       </label>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
       {documents.length === 0 ? (
         <button
@@ -123,25 +119,9 @@ export function MaterialStep({
                 <span className="truncate text-sm font-medium">{d.name}</span>
                 <span className="text-xs text-muted-foreground">{d.sizeLabel}</span>
               </div>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Pagine</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={2000}
-                  value={d.pages}
-                  onChange={(e) =>
-                    onChange(
-                      documents.map((x) =>
-                        x.id === d.id
-                          ? { ...x, pages: Math.max(1, Math.min(2000, Number(e.target.value) || 1)) }
-                          : x,
-                      ),
-                    )
-                  }
-                  className="tabular h-8 w-16 rounded-lg border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-primary"
-                />
-              </label>
+              <span className="tabular rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                {d.pages} pagine
+              </span>
               <button
                 type="button"
                 onClick={() => onChange(documents.filter((x) => x.id !== d.id))}

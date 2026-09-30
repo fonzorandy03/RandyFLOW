@@ -81,6 +81,14 @@ export const http = {
     }
     return (await res.json()) as T
   },
+  blob: async (path: string) => {
+    if (!BASE_URL) throw new ApiError('Backend non configurato. Imposta NEXT_PUBLIC_API_BASE_URL.', 0)
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : undefined,
+    })
+    if (!res.ok) throw new ApiError(`PDF non disponibile (${res.status})`, res.status)
+    return res.blob()
+  },
 }
 
 let prepareMock = () => {}

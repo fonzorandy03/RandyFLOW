@@ -44,7 +44,7 @@ export function NewExamWizard() {
     documents: [],
     availability: DEFAULT_AVAILABILITY,
     unavailableDays: [],
-    reviewDays: 3,
+    reviewDays: 7,
   })
   const update = (patch: Partial<ExamDraft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -204,7 +204,7 @@ export function NewExamWizard() {
               <fieldset className="flex flex-col gap-3">
                 <legend className="mb-3 text-sm font-medium">Giorni di ripasso finale</legend>
                 <div className="flex flex-wrap gap-2">
-                  {[0, 1, 2, 3, 4, 5].map((n) => (
+                  {[0, 1, 2, 3, 4, 5, 7, 14, 21].map((n) => (
                     <button
                       key={n}
                       type="button"
@@ -217,7 +217,7 @@ export function NewExamWizard() {
                           : 'border-border bg-card hover:border-primary/40',
                       )}
                     >
-                      {n === 0 ? 'Nessuno' : n}
+                      {n === 0 ? 'Nessuno' : n === 7 ? '1 settimana' : n === 14 ? '2 settimane' : n === 21 ? '3 settimane' : n}
                     </button>
                   ))}
                 </div>

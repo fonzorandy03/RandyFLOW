@@ -280,10 +280,18 @@ export const planApi = {
 }
 
 export const studyApi = {
+  inspectPdf: (file: File): Promise<{ name: string; pages: number; bytes: number }> =>
+    USE_MOCKS
+      ? file.arrayBuffer().then((buffer) => {
+          const text = new TextDecoder('latin1').decode(buffer)
+          return { name: file.name, pages: Math.max(1, text.match(/\/Type\s*\/Page\b/g)?.length ?? 1), bytes: file.size }
+        })
+      : http.upload('/materials/inspect', file),
   uploadPdf: (examId: string, file: File): Promise<StudyDocument> =>
     USE_MOCKS
       ? Promise.reject(new Error('Avvia il backend per caricare PDF reali.'))
       : http.upload(`/exams/${examId}/materials`, file),
+  pdf: (id: string) => http.blob(`/documents/${id}/file`),
   thumbnails: (id: string): Promise<import('../types').Slide[]> =>
     USE_MOCKS
       ? mockResponse(() => {

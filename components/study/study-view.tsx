@@ -9,6 +9,7 @@ import { useDocuments, useExams, useStudyLogs, useToday } from '@/lib/hooks'
 import { studyHref } from '@/lib/routes'
 import { formatDuration, formatDay } from '@/lib/date'
 import { StudyPackageImport } from './study-package-import'
+import { StudyPackagePromptCard } from './study-package-prompt-card'
 
 export function StudyView() {
   const docs = useDocuments()
@@ -41,6 +42,7 @@ export function StudyView() {
           title="Il tuo spazio di studio"
           description="Riprendi il filo, una pagina alla volta."
         />
+        <StudyPackagePromptCard />
         <StudyPackageImport />
         {today.data && (
           <section className="rounded-2xl border border-border bg-card p-6">

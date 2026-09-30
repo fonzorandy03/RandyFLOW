@@ -48,6 +48,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [timer, setTimer] = useState(false)
   const [saving, setSaving] = useState(false)
   const [completed, setCompleted] = useState<number[]>([])
+  const [pdfUrl, setPdfUrl] = useState('')
   const root = useRef<HTMLDivElement>(null)
   const positionQueue = useRef(Promise.resolve())
   const { focus, setFocus } = useShell()
@@ -70,6 +71,19 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const cards = pkg.data?.flashcards.filter((item) => item.topicId === topic?.id) ?? []
 
   useEffect(() => () => setFocus(false), [setFocus])
+  useEffect(() => {
+    let active = true
+    let objectUrl = ''
+    void studyApi.pdf(doc.id).then((blob) => {
+      if (!active) return
+      objectUrl = URL.createObjectURL(blob)
+      setPdfUrl(objectUrl)
+    }).catch(() => setPdfUrl(''))
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [doc.id])
   useEffect(() => {
     positionQueue.current = positionQueue.current
       .then(async () => {
@@ -282,18 +296,18 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
             </div>
           )}
           <div className="flex-1 overflow-auto bg-muted/50 p-3 md:p-6">
-            <article
-              className="mx-auto min-h-80 rounded-xl border bg-card p-6 shadow-sm md:p-9"
-              style={{ zoom: zoom / 100 }}
-            >
-              {slide.error ? (
-                <ErrorState onRetry={() => void slide.mutate()} />
-              ) : slide.data ? (
-                <SlideContent slide={slide.data} />
-              ) : (
-                <LoadingState />
-              )}
-            </article>
+            {pdfUrl ? (
+              <iframe
+                key={`${page}:${zoom}`}
+                src={`${pdfUrl}#page=${page}&zoom=${zoom}`}
+                title={`${doc.name}, pagina ${page}`}
+                className="mx-auto h-[72vh] min-h-[560px] w-full rounded-xl border bg-white shadow-sm"
+              />
+            ) : (
+              <article className="mx-auto min-h-80 rounded-xl border bg-card p-6 shadow-sm md:p-9" style={{ zoom: zoom / 100 }}>
+                {slide.error ? <ErrorState onRetry={() => void slide.mutate()} /> : slide.data ? <SlideContent slide={slide.data} /> : <LoadingState />}
+              </article>
+            )}
           </div>
         </section>
         <section
