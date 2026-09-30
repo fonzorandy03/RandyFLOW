@@ -1,5 +1,6 @@
 'use client'
 import Button from '@mui/material/Button'
+import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { mutate } from 'swr'
@@ -16,6 +17,18 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [examId, setExamId] = useState('')
+  if (exams.length === 0)
+    return (
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="font-semibold">Importa Study Package</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Prima crea un esame e il relativo piano di studio. Il file .study potrà essere caricato soltanto dopo la creazione del piano.
+        </p>
+        <Button component={Link} href="/esami/nuovo" variant="contained" className="mt-4">
+          Crea esame e piano
+        </Button>
+      </section>
+    )
   const select = async (file?: File) => {
     setPreview(undefined)
     setIssues([])
@@ -43,13 +56,13 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
   }
   const install = async () => {
     if (!preview) return
-    if (exams.length && !examId) {
+    if (!examId) {
       setIssues(['Scegli l’esame al quale collegare questo package.'])
       return
     }
     setBusy(true)
     try {
-      const result = await studyPackageApi.import(preview.package, examId || undefined)
+      const result = await studyPackageApi.import(preview.package, examId)
       await refreshPlanData()
       await mutate(
         (key) =>

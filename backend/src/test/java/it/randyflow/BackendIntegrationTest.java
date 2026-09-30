@@ -85,6 +85,8 @@ class BackendIntegrationTest {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(web).build();
     mvc.perform(post("/api/v1/study-packages/preview").contentType("application/json").content(example()))
         .andExpect(status().isOk()).andExpect(jsonPath("$.summary.packageId").value("economia-esempio"));
+    mvc.perform(post("/api/v1/study-packages/import").contentType("application/json").content(example()))
+        .andExpect(status().isBadRequest());
     mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
   }
 

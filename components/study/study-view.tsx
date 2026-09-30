@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { PageContainer } from '../layout/app-shell'
 import { PageHeader } from '../common/page-header'
 import { ErrorState, LoadingState } from '../common/states'
-import { useDocuments, useExams, useStudyLogs, useToday } from '@/lib/hooks'
+import { useDocuments, useExams, useSessions, useStudyLogs, useToday } from '@/lib/hooks'
 import { studyHref } from '@/lib/routes'
 import { formatDuration, formatDay } from '@/lib/date'
 import { StudyPackageImport } from './study-package-import'
@@ -15,8 +15,9 @@ export function StudyView() {
   const docs = useDocuments()
   const exams = useExams()
   const logs = useStudyLogs()
+  const sessions = useSessions()
   const today = useToday()
-  if (docs.error || exams.error || logs.error)
+  if (docs.error || exams.error || logs.error || sessions.error)
     return (
       <PageContainer>
         <ErrorState
@@ -24,11 +25,12 @@ export function StudyView() {
             void docs.mutate()
             void exams.mutate()
             void logs.mutate()
+            void sessions.mutate()
           }}
         />
       </PageContainer>
     )
-  if (!docs.data || !exams.data || !logs.data)
+  if (!docs.data || !exams.data || !logs.data || !sessions.data)
     return (
       <PageContainer>
         <LoadingState />
@@ -43,7 +45,9 @@ export function StudyView() {
           description="Riprendi il filo, una pagina alla volta."
         />
         <StudyPackagePromptCard />
-        <StudyPackageImport exams={exams.data} />
+        <StudyPackageImport
+          exams={exams.data.filter((exam) => sessions.data!.some((session) => session.examId === exam.id))}
+        />
         {today.data && (
           <section className="rounded-2xl border border-border bg-card p-6">
             <p className="text-xs text-primary">ESAME CORRENTE</p>
