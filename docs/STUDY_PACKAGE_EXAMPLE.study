@@ -5,17 +5,130 @@
   "revision": 1,
   "generatedAt": "2026-09-30T12:00:00Z",
   "language": "it",
-  "exam": { "id": "economia", "name": "Economia aziendale", "description": "Esempio importabile", "examDate": "2026-12-15" },
-  "materials": [{ "id": "economia-slide", "name": "Lezione 1.pdf", "type": "pdf", "pageCount": 4 }],
-  "topics": [{
-    "id": "economia-costi", "materialId": "economia-slide", "name": "Costi fissi e variabili", "pageType": "content", "slideRange": { "from": 1, "to": 4 }, "difficulty": 2, "importance": 5, "estimatedMinutes": 30,
-    "explanations": { "simple": "I costi fissi non cambiano con la quantità prodotta; quelli variabili sì.", "normal": "Nel breve periodo i costi totali sono la somma di costi fissi e costi variabili. Il costo medio si ottiene dividendo il costo totale per la quantità.", "deep": "La distinzione dipende dall’orizzonte temporale. Il costo marginale misura la variazione del costo totale dovuta a un’unità aggiuntiva e guida le decisioni di produzione." },
-    "summary": "Costo totale = costo fisso + costo variabile. Costo medio e marginale descrivono il costo per unità e dell’unità aggiuntiva.",
-    "keyConcepts": ["Costo fisso", "Costo variabile", "Costo marginale"],
-    "examples": ["L’affitto resta fisso se la produzione passa da 100 a 120 unità; la materia prima aumenta."],
-    "quizIds": ["quiz-costi-1"], "flashcardIds": ["card-costi-1"], "examQuestionIds": ["exam-costi-1"]
-  }],
-  "quizzes": [{ "id": "quiz-costi-1", "topicId": "economia-costi", "type": "multiple", "prompt": "Quale voce è normalmente un costo fisso nel breve periodo?", "options": ["Materia prima", "Affitto", "Commissione per vendita"], "correctAnswer": 1, "explanation": "L’affitto non varia direttamente con le unità prodotte nel breve periodo.", "slideRefs": [2] }],
-  "flashcards": [{ "id": "card-costi-1", "topicId": "economia-costi", "front": "Come si calcola il costo totale?", "back": "Costo fisso più costo variabile.", "slideRefs": [2, 3] }],
-  "examQuestions": [{ "id": "exam-costi-1", "topicId": "economia-costi", "prompt": "Spiega la differenza tra costo fisso, variabile e marginale con un esempio.", "modelAnswer": "Il costo fisso non cambia al variare della quantità nel breve periodo; il variabile cambia con la produzione; il marginale è il costo dell’unità aggiuntiva. Per una fabbrica, affitto, materia prima e incremento di costo per un pezzo aggiuntivo illustrano i tre concetti.", "evaluationCriteria": ["Definisce i tre costi", "Distingue breve e lungo periodo", "Fornisce un esempio coerente"], "slideRefs": [1, 2, 3, 4] }]
+  "exam": {
+    "id": "economia",
+    "name": "Economia aziendale",
+    "description": "Esempio importabile",
+    "examDate": "2026-12-15"
+  },
+  "materials": [
+    {
+      "id": "economia-slide",
+      "name": "Lezione 1.pdf",
+      "type": "pdf",
+      "pageCount": 4
+    }
+  ],
+  "topics": [
+    {
+      "id": "economia-copertina",
+      "materialId": "economia-slide",
+      "name": "Copertina del corso",
+      "pageType": "cover",
+      "studyable": false,
+      "slideRange": {
+        "from": 1,
+        "to": 1
+      },
+      "difficulty": 1,
+      "importance": 1,
+      "estimatedMinutes": 0,
+      "explanations": {
+        "simple": "Copertina del materiale.",
+        "normal": "Pagina introduttiva con il titolo del materiale.",
+        "deep": "La pagina identifica il materiale e non introduce contenuti da studiare."
+      },
+      "summary": "Copertina non inclusa nel piano di studio.",
+      "keyConcepts": [],
+      "examples": [],
+      "quizIds": [],
+      "flashcardIds": [],
+      "examQuestionIds": []
+    },
+    {
+      "id": "economia-costi",
+      "materialId": "economia-slide",
+      "name": "Costi fissi e variabili",
+      "pageType": "content",
+      "slideRange": {
+        "from": 2,
+        "to": 4
+      },
+      "difficulty": 2,
+      "importance": 5,
+      "estimatedMinutes": 30,
+      "explanations": {
+        "simple": "I costi fissi non cambiano con la quantità prodotta; quelli variabili sì.",
+        "normal": "Nel breve periodo i costi totali sono la somma di costi fissi e costi variabili. Il costo medio si ottiene dividendo il costo totale per la quantità.",
+        "deep": "La distinzione dipende dall’orizzonte temporale. Il costo marginale misura la variazione del costo totale dovuta a un’unità aggiuntiva e guida le decisioni di produzione."
+      },
+      "summary": "Costo totale = costo fisso + costo variabile. Costo medio e marginale descrivono il costo per unità e dell’unità aggiuntiva.",
+      "keyConcepts": [
+        "Costo fisso",
+        "Costo variabile",
+        "Costo marginale"
+      ],
+      "examples": [
+        "L’affitto resta fisso se la produzione passa da 100 a 120 unità; la materia prima aumenta."
+      ],
+      "quizIds": [
+        "quiz-costi-1"
+      ],
+      "flashcardIds": [
+        "card-costi-1"
+      ],
+      "examQuestionIds": [
+        "exam-costi-1"
+      ],
+      "studyable": true
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "quiz-costi-1",
+      "topicId": "economia-costi",
+      "type": "multiple",
+      "prompt": "Quale voce è normalmente un costo fisso nel breve periodo?",
+      "options": [
+        "Materia prima",
+        "Affitto",
+        "Commissione per vendita"
+      ],
+      "correctAnswer": 1,
+      "explanation": "L’affitto non varia direttamente con le unità prodotte nel breve periodo.",
+      "slideRefs": [
+        2
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "id": "card-costi-1",
+      "topicId": "economia-costi",
+      "front": "Come si calcola il costo totale?",
+      "back": "Costo fisso più costo variabile.",
+      "slideRefs": [
+        2,
+        3
+      ]
+    }
+  ],
+  "examQuestions": [
+    {
+      "id": "exam-costi-1",
+      "topicId": "economia-costi",
+      "prompt": "Spiega la differenza tra costo fisso, variabile e marginale con un esempio.",
+      "modelAnswer": "Il costo fisso non cambia al variare della quantità nel breve periodo; il variabile cambia con la produzione; il marginale è il costo dell’unità aggiuntiva. Per una fabbrica, affitto, materia prima e incremento di costo per un pezzo aggiuntivo illustrano i tre concetti.",
+      "evaluationCriteria": [
+        "Definisce i tre costi",
+        "Distingue breve e lungo periodo",
+        "Fornisce un esempio coerente"
+      ],
+      "slideRefs": [
+        2,
+        3,
+        4
+      ]
+    }
+  ]
 }

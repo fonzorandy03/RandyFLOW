@@ -224,13 +224,13 @@ export function ExamDetail({ id }: { id: string }) {
                         <div className="flex items-baseline justify-between gap-3">
                           <p className="truncate text-sm font-medium">{d.name}</p>
                           <span className="tabular shrink-0 text-xs text-muted-foreground">
-                            {Math.round((d.pagesRead / d.pages) * 100)}%
+                            {Math.round((d.pagesRead / Math.max(1, d.studyablePages)) * 100)}%
                           </span>
                         </div>
                         <div className="h-1 overflow-hidden rounded-full bg-muted">
                           <div
                             className="h-full rounded-full bg-primary"
-                            style={{ width: `${(d.pagesRead / d.pages) * 100}%` }}
+                            style={{ width: `${(d.pagesRead / Math.max(1, d.studyablePages)) * 100}%` }}
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">

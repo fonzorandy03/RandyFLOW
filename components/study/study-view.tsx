@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import Button from '@mui/material/Button'
 import LinearProgress from '@mui/material/LinearProgress'
 import Link from 'next/link'
@@ -73,9 +73,9 @@ export function StudyView() {
                   {exams.data?.find((e) => e.id === d.examId)?.name}
                 </p>
                 <h3 className="font-medium">{d.name}</h3>
-                <LinearProgress variant="determinate" value={(100 * d.pagesRead) / d.pages} />
+                <LinearProgress variant="determinate" value={(100 * d.pagesRead) / Math.max(1, d.studyablePages)} />
                 <p className="text-sm text-muted-foreground">
-                  {d.pagesRead} / {d.pages} pagine · ultima posizione: {d.lastPage}
+                  {d.pagesRead} / {d.studyablePages} pagine didattiche · ultima posizione: {d.lastPage}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button component={Link} href={studyHref(d.id, null, d.lastPage)} variant="outlined">

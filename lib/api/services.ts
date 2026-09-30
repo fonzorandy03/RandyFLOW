@@ -108,6 +108,7 @@ export const examsApi = {
         name: input.documents[0]?.name ?? `${input.name}.pdf`,
         kind: 'pdf',
         pages,
+        studyablePages: pages,
         lastPage: 1,
         pagesRead: 0,
         chapters,
@@ -512,7 +513,15 @@ export const studyPackageApi = {
       if (current !== undefined && pkg.revision < current)
         throw new Error(`La revisione ${pkg.revision} è precedente alla revisione installata ${current}.`)
       const existingExam = db.exams.find((exam) => exam.id === pkg.exam.id)
-      const totalSlides = pkg.materials.reduce((sum, material) => sum + material.pageCount, 0)
+      const studyable = (materialId?: string) => pkg.topics.filter((topic) =>
+        (!materialId || topic.materialId === materialId) &&
+        (topic.pageType ?? 'content') === 'content' &&
+        (topic.studyable ?? true),
+      )
+      const studyableCount = (materialId?: string) => studyable(materialId).reduce(
+        (sum, topic) => sum + topic.slideRange.to - topic.slideRange.from + 1, 0,
+      )
+      const totalSlides = studyableCount()
       if (existingExam) {
         existingExam.name = pkg.exam.name
         existingExam.description = pkg.exam.description
@@ -562,6 +571,7 @@ export const studyPackageApi = {
           existing.name = material.name
           existing.kind = material.type === 'slides' ? 'slides' : 'pdf'
           existing.pages = material.pageCount
+          existing.studyablePages = studyableCount(material.id)
           existing.lastPage = Math.min(existing.lastPage, material.pageCount)
           existing.pagesRead = Math.min(existing.pagesRead, material.pageCount)
           existing.chapters = chapters
@@ -573,6 +583,7 @@ export const studyPackageApi = {
             name: material.name,
             kind: material.type === 'slides' ? 'slides' : 'pdf',
             pages: material.pageCount,
+            studyablePages: studyableCount(material.id),
             lastPage: 1,
             pagesRead: 0,
             chapters,
@@ -581,7 +592,7 @@ export const studyPackageApi = {
           })
         }
       }
-      for (const topic of pkg.topics) {
+      for (const topic of studyable()) {
         if (!db.mastery.some((item) => item.id === topic.id))
           db.mastery.push({
             id: topic.id,

@@ -21,6 +21,9 @@ const text = (value: unknown) => typeof value === 'string' && value.trim().lengt
 const integer = (value: unknown) => Number.isInteger(value)
 const difficulty = (value: unknown): value is StudyDifficulty =>
   integer(value) && Number(value) >= 1 && Number(value) <= 5
+const pageTypes = ['content', 'cover', 'index', 'separator', 'reference', 'empty', 'section-divider', 'references', 'blank', 'exercise']
+const canonicalPageType = (value: unknown) =>
+  value === 'section-divider' ? 'separator' : value === 'references' ? 'reference' : value === 'blank' ? 'empty' : value === 'exercise' ? 'content' : (value ?? 'content')
 
 export function parseStudyPackage(source: string): StudyPackage {
   let value: unknown
@@ -114,7 +117,20 @@ export function validateStudyPackage(value: unknown): StudyPackage {
     validateReferences(topic.examQuestionIds, examQuestionIds, `topics[${index}].examQuestionIds`, issues)
   }
   if (issues.length) throw new StudyPackageValidationError(issues)
-  return structuredClone(value) as unknown as StudyPackage
+  const normalized = structuredClone(value) as unknown as StudyPackage
+  normalized.topics = normalized.topics.map((topic) => {
+    const pageType = canonicalPageType(topic.pageType) as StudyPackageTopic['pageType']
+    const studyable = pageType === 'content' && (topic.studyable ?? true)
+    return studyable
+      ? { ...topic, pageType, studyable }
+      : { ...topic, pageType, studyable, difficulty: 1, importance: 1, estimatedMinutes: 0,
+          keyConcepts: [], examples: [], quizIds: [], flashcardIds: [], examQuestionIds: [] }
+  })
+  const studyableIds = new Set(normalized.topics.filter((topic) => topic.studyable).map((topic) => topic.id))
+  normalized.quizzes = normalized.quizzes.filter((item) => studyableIds.has(item.topicId))
+  normalized.flashcards = normalized.flashcards.filter((item) => studyableIds.has(item.topicId))
+  normalized.examQuestions = normalized.examQuestions.filter((item) => studyableIds.has(item.topicId))
+  return normalized
 }
 
 function validateTopic(
@@ -134,9 +150,7 @@ function validateTopic(
   if (!materialIds.has(String(value.materialId))) issues.push(`topics[${index}].materialId non esiste.`)
   if (
     value.pageType !== undefined &&
-    !['content', 'cover', 'index', 'section-divider', 'blank', 'references', 'exercise'].includes(
-      String(value.pageType),
-    )
+    !pageTypes.includes(String(value.pageType))
   )
     issues.push(`topics[${index}].pageType non valido.`)
   const range = value.slideRange
@@ -150,8 +164,15 @@ function validateTopic(
     issues.push(`topics[${index}].slideRange non valido.`)
   if (!difficulty(value.difficulty)) issues.push(`topics[${index}].difficulty deve essere 1–5.`)
   if (!difficulty(value.importance)) issues.push(`topics[${index}].importance deve essere 1–5.`)
-  if (!integer(value.estimatedMinutes) || Number(value.estimatedMinutes) < 1)
-    issues.push(`topics[${index}].estimatedMinutes deve essere positivo.`)
+  if (value.studyable !== undefined && typeof value.studyable !== 'boolean')
+    issues.push(`topics[${index}].studyable deve essere booleano.`)
+  const studyable = value.studyable ?? true
+  if (!integer(value.estimatedMinutes) || Number(value.estimatedMinutes) < (studyable ? 1 : 0))
+    issues.push(`topics[${index}].estimatedMinutes non valido.`)
+  if (!studyable && Number(value.estimatedMinutes) !== 0)
+    issues.push(`topics[${index}].estimatedMinutes deve essere 0 quando studyable=false.`)
+  if (!studyable && (Number(value.difficulty) !== 1 || Number(value.importance) !== 1))
+    issues.push(`topics[${index}] non didattico deve avere difficulty e importance uguali a 1.`)
   const explanations = value.explanations
   if (
     !object(explanations) ||
@@ -165,6 +186,8 @@ function validateTopic(
     if (!Array.isArray(value[field]) || !(value[field] as unknown[]).every(text))
       issues.push(`topics[${index}].${field} deve essere un array di stringhe.`)
   }
+  if (!studyable && ['quizIds', 'flashcardIds', 'examQuestionIds'].some((field) => (value[field] as unknown[])?.length))
+    issues.push(`topics[${index}] non didattico non può avere attività.`)
 }
 
 type ItemValidator = (value: Record<string, unknown>, path: string, issues: string[]) => void

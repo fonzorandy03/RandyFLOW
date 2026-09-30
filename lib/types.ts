@@ -77,6 +77,7 @@ export interface StudyDocument {
   name: string
   kind: 'pdf' | 'slides'
   pages: number
+  studyablePages: number
   lastPage: number
   pagesRead: number
   chapters: Chapter[]
@@ -167,7 +168,18 @@ export interface StudyPackageTopic {
   id: string
   materialId: string
   name: string
-  pageType?: 'content' | 'cover' | 'index' | 'section-divider' | 'blank' | 'references' | 'exercise'
+  pageType?:
+    | 'content'
+    | 'cover'
+    | 'index'
+    | 'separator'
+    | 'reference'
+    | 'empty'
+    | 'section-divider'
+    | 'references'
+    | 'blank'
+    | 'exercise'
+  studyable?: boolean
   slideRange: SlideRange
   difficulty: StudyDifficulty
   importance: StudyDifficulty

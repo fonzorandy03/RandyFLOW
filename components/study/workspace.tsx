@@ -11,6 +11,7 @@ import { refreshPlanData, useDocument, useSessions } from '@/lib/hooks'
 import { topicForSlide } from '@/lib/study-package'
 import type { StudyDocument } from '@/lib/types'
 import { ErrorState, LoadingState } from '../common/states'
+import { MarkdownContent } from '../common/markdown-content'
 import { useShell } from '../layout/shell-context'
 import { SlideContent } from './slide-content'
 
@@ -20,6 +21,9 @@ const pageTypeLabels = {
   content: 'Contenuto',
   cover: 'Copertina',
   index: 'Indice',
+  separator: 'Separatore di sezione',
+  reference: 'Riferimenti',
+  empty: 'Pagina vuota',
   'section-divider': 'Separatore di sezione',
   blank: 'Pagina vuota',
   references: 'Riferimenti',
@@ -76,6 +80,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   )
   const thumbnails = useSWR(thumbs ? ['thumbnails', doc.id] : null, () => studyApi.thumbnails(doc.id))
   const topic = pkg.data ? topicForSlide(pkg.data, doc.id, page) : undefined
+  const isStudyable = !topic || ((topic.pageType ?? 'content') === 'content' && (topic.studyable ?? true))
   const quizzes = pkg.data?.quizzes.filter((item) => item.topicId === topic?.id) ?? []
   const cards = pkg.data?.flashcards.filter((item) => item.topicId === topic?.id) ?? []
 
@@ -176,16 +181,18 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           <p className="mb-2 text-sm font-medium">
             {hasGoal
               ? `Obiettivo: slide ${from}–${to} · ${Math.min(count, total)} / ${total} slide`
-              : `Documento · ${doc.pagesRead} / ${doc.pages} pagine completate`}
+              : `Documento · ${doc.pagesRead} / ${doc.studyablePages} pagine didattiche completate`}
           </p>
           <LinearProgress
             variant="determinate"
-            value={hasGoal ? Math.min(100, (100 * count) / total) : (100 * doc.pagesRead) / doc.pages}
+            value={hasGoal ? Math.min(100, (100 * count) / total) : (100 * doc.pagesRead) / Math.max(1, doc.studyablePages)}
           />
         </div>
-        <Button variant="contained" disabled={saving} onClick={complete}>
-          Segna pagina letta e continua
-        </Button>
+        {isStudyable ? (
+          <Button variant="contained" disabled={saving} onClick={complete}>Segna pagina letta e continua</Button>
+        ) : (
+          <Button variant="outlined" onClick={() => go(page + 1)} disabled={page === doc.pages}>Pagina successiva</Button>
+        )}
         <Button size="small" onClick={() => setTimer(!timer)}>
           {timer ? 'Pausa' : 'Timer'} {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
         </Button>
@@ -331,7 +338,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
             </p>
             {topic && (
               <span className="mt-2 inline-flex rounded-full border bg-muted px-2 py-1 text-xs font-medium">
-                {pageTypeLabels[topic.pageType ?? 'content']}
+                {pageTypeLabels[topic.pageType ?? 'content']}{!isStudyable && ' · non inclusa nel piano di studio'}
               </span>
             )}
           </div>
@@ -395,6 +402,7 @@ function SlideRefs({ refs, go }: { refs: number[]; go: (page: number) => void })
     </div>
   )
 }
+
 function AssistantContent({
   tab,
   topic,
@@ -420,7 +428,7 @@ function AssistantContent({
     const key = level === 'Semplice' ? 'simple' : level === 'Approfondito' ? 'deep' : 'normal'
     return (
       <div>
-        <p className="whitespace-pre-wrap text-sm leading-7">{topic.explanations[key]}</p>
+        <MarkdownContent>{topic.explanations[key]}</MarkdownContent>
         <SlideRefs refs={refs} go={go} />
       </div>
     )
@@ -428,7 +436,7 @@ function AssistantContent({
   if (tab === 'Riassunto')
     return (
       <div>
-        <p className="whitespace-pre-wrap text-sm leading-7">{topic.summary}</p>
+        <MarkdownContent>{topic.summary}</MarkdownContent>
         <SlideRefs refs={refs} go={go} />
       </div>
     )

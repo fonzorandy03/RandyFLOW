@@ -1,87 +1,52 @@
-# Study Package v1.0
+﻿# RandyFLOW Study Package v1.0
 
-Study Package è il formato JSON che porta in RandyFLOW contenuti didattici già preparati. Il file usa l’estensione `.study` (consigliata) oppure `.json`. Non contiene progresso, risposte dello studente, sessioni, mastery o statistiche: questi dati restano nell’app e vengono conservati quando il package viene aggiornato.
+## Scopo
 
-## Identità e aggiornamenti
+Un file `.study` è JSON UTF-8 conforme a `study-package-v1.schema.json`. Contiene esclusivamente contenuti didattici derivati dai materiali. Progresso, sessioni, risultati, mastery, statistiche e preferenze restano nell'applicazione e vengono preservati quando aumenta `revision` dello stesso `packageId`.
 
-- `format` deve essere `randyflow-study-package`.
-- `version` deve essere `1.0`.
-- `packageId` è l’identità stabile del package. Non cambiarlo tra revisioni.
-- `revision` è un intero positivo e deve aumentare per ogni aggiornamento.
-- Gli `id` di esame, materiali, argomenti e attività devono restare stabili se rappresentano lo stesso elemento. Questo permette all’app di conservare il progresso.
-- `generatedAt` è una data e ora ISO 8601; `language` è un codice lingua, per esempio `it`.
+## Struttura principale
 
-## Struttura
+Il package richiede `format: "randyflow-study-package"`, `version: "1.0"`, `packageId`, `revision`, `generatedAt`, `language`, `exam`, `materials`, `topics`, `quizzes`, `flashcards` ed `examQuestions`. Gli ID devono essere stabili, univoci e usare lettere, numeri, punto, trattino o underscore. Ogni riferimento deve puntare a un ID esistente.
 
-```json
-{
-  "format": "randyflow-study-package",
-  "version": "1.0",
-  "packageId": "stringa-stabile",
-  "revision": 1,
-  "generatedAt": "2026-09-30T12:00:00Z",
-  "language": "it",
-  "exam": {},
-  "materials": [],
-  "topics": [],
-  "quizzes": [],
-  "flashcards": [],
-  "examQuestions": []
-}
-```
+`exam` descrive esame, nome, descrizione e data facoltativa. Ogni material dichiara ID, nome, tipo e `pageCount` reale. La numerazione in `slideRange` e `slideRefs` coincide sempre con la pagina fisica del PDF, a partire da 1.
 
-### `exam`
+## Topic e classificazione delle pagine
 
-`id` e `name` sono obbligatori. `description` e `examDate` (`YYYY-MM-DD`) sono facoltativi. L’`id` deve essere breve, stabile e univoco.
+Per permettere un controllo preciso, un generatore deve creare un topic per ogni pagina (`from` uguale a `to`). Ogni topic contiene:
 
-### `materials`
+- `pageType`: `content`, `cover`, `index`, `separator`, `reference` o `empty`;
+- `studyable`: indica se la pagina entra nello studio personale;
+- intervallo originale, difficoltà, importanza, minuti stimati;
+- spiegazioni `simple`, `normal` e `deep`, summary, concetti ed esempi;
+- ID delle attività collegate.
 
-Ogni materiale richiede `id`, `name`, `type` (`pdf`, `slides` o `notes`) e `pageCount` intero positivo. I numeri usati in tutti gli `slideRefs` si riferiscono alle pagine del materiale. Un argomento identifica il materiale tramite `materialId`.
+Solo una pagina con `pageType: "content"` e `studyable: true` entra in Planner, carico, progresso e mastery. Copertine, indici, separatori, riferimenti e pagine vuote restano visibili nel lettore con la numerazione originale, ma richiedono `studyable: false`, `difficulty: 1`, `importance: 1`, `estimatedMinutes: 0` e liste di attività vuote. `keyConcepts` ed `examples` possono essere vuoti.
 
-### `topics`
+Per compatibilità, se `pageType` manca l'importer usa `content`; se `studyable` manca usa `true`. L'importer converte anche i vecchi alias `section-divider`, `references`, `blank` ed `exercise` rispettivamente in `separator`, `reference`, `empty` e `content`.
 
-Ogni argomento richiede:
+## Qualità dei contenuti
 
-- `id`, `materialId`, `name`;
-- `pageType`, che classifica la pagina come `content`, `cover`, `index`, `section-divider`, `blank`, `references` oppure `exercise`;
-- `slideRange` con `from` e `to` inclusivi, interi positivi;
-- `difficulty` e `importance`, interi da 1 a 5;
-- `estimatedMinutes`, minuti interi positivi necessari per studiare l’intero intervallo;
-- `explanations.simple`, `explanations.normal`, `explanations.deep`;
-- `summary`, `keyConcepts[]`, `examples[]`;
-- `quizIds[]`, `flashcardIds[]`, `examQuestionIds[]`, contenenti solo ID esistenti.
+Le spiegazioni devono insegnare davvero il contenuto visibile della singola pagina. Il livello semplice introduce termini e intuizione; quello normale sviluppa passaggi e collegamenti; quello approfondito aggiunge precisione, implicazioni e preparazione d'esame. Il summary deve essere sostanziale. Markdown è consentito nelle spiegazioni e nei riassunti per titoli, grassetto, paragrafi ed elenchi.
 
-Gli intervalli devono coprire le slide utili senza uscire da `pageCount`. Se una slide appartiene a un argomento, l’Assistente di Studio mostra automaticamente quel contenuto. Le tre spiegazioni devono trattare lo stesso argomento con profondità crescente. Il riassunto deve essere autonomo; concetti ed esempi devono essere specifici e verificabili nelle slide.
+La classificazione richiede analisi visiva e testuale. Titolo, layout, immagini, formule, tabelle, densità e funzione nel documento servono a distinguere contenuto, copertina, indice, separatore, riferimenti e pagina vuota. Non basta la presenza di testo.
 
-`pageType` ? facoltativo per mantenere compatibili i package v1.0 gi? creati; se manca, l'app usa `content`. Nei nuovi package deve essere sempre presente. Copertine, indici, separatori, pagine vuote, riferimenti ed esercizi devono avere un topic dedicato alla singola pagina. I contenuti associati devono descrivere fedelmente ci? che appare: una copertina non va trattata come una lezione e una pagina vuota non deve generare nozioni inventate.
+## Attività
 
-### `quizzes`
+Quiz, flashcard e domande d'esame appartengono a un topic didattico e includono `slideRefs` validi. I quiz contengono risposta e spiegazione; le flashcard fronte e retro; le domande d'esame risposta modello e criteri di valutazione. Una risposta multipla usa in `correctAnswer` l'indice zero-based dell'opzione. Una risposta aperta usa una stringa.
 
-Campi comuni: `id`, `topicId`, `type`, `prompt`, `correctAnswer`, `explanation`, `slideRefs` non vuoto.
+## Aggiornamento
 
-- `multiple`: `options` contiene almeno due risposte e `correctAnswer` è l’indice zero-based dell’opzione corretta.
-- `open`: `correctAnswer` è la risposta modello; `acceptedKeywords` può elencare parole chiave utili.
+Per aggiornare un package si conserva `packageId`, si incrementa `revision` e si mantengono gli ID dei contenuti invariati quando rappresentano lo stesso elemento. L'app sostituisce i contenuti importati e ricalcola il piano, ma conserva pagine completate ancora didattiche, sessioni storiche, tentativi, recensioni e statistiche personali.
 
-La spiegazione deve motivare la risposta. Tutti i riferimenti devono indicare le slide che contengono l’evidenza.
+## Controlli prima della consegna
 
-### `flashcards`
+1. `pageCount` coincide con il PDF.
+2. Ogni pagina fisica compare una sola volta e l'ultima pagina è stata analizzata.
+3. `pageType` deriva da testo e aspetto della pagina.
+4. Solo i contenuti didattici hanno `studyable: true`.
+5. Le pagine didattiche hanno spiegazioni complete, summary, concetti, esempi e attività.
+6. Le pagine non didattiche hanno tempo zero e nessuna attività.
+7. Tutti gli ID e riferimenti esistono e puntano alle pagine originali corrette.
+8. Nessun contenuto è inventato o attribuito alla pagina sbagliata.
 
-Ogni elemento richiede `id`, `topicId`, `front`, `back` e `slideRefs` non vuoto. Il fronte deve porre una singola domanda; il retro deve essere breve ma sufficiente a ripassare il concetto.
-
-### `examQuestions`
-
-Ogni elemento richiede `id`, `topicId`, `prompt`, `modelAnswer`, `evaluationCriteria[]` e `slideRefs` non vuoto. Queste domande alimentano la Simulazione Esame. La risposta modello deve essere completa e i criteri devono consentire un’autovalutazione concreta.
-
-## Regole di validità
-
-1. Il file deve contenere un solo oggetto JSON, senza Markdown o commenti.
-2. Tutti gli ID devono essere univoci nella propria collezione e tutti i riferimenti devono esistere.
-3. Ogni `topicId` deve esistere; ogni `materialId` deve esistere.
-4. Ogni riferimento slide deve essere un intero positivo e ricadere nel materiale dell’argomento.
-5. Ogni argomento deve avere contenuti reali per tutte le sezioni e almeno una domanda, una flashcard e una possibile domanda d’esame.
-6. Non inventare informazioni assenti dal PDF. Segnalare in modo esplicito eventuali limiti nel testo del contenuto.
-7. Validare il risultato con [`study-package-v1.schema.json`](./study-package-v1.schema.json) prima della consegna.
-
-## Procedura consigliata dal PDF
-
-Leggere tutte le pagine, rilevare titolo e numero effettivo di ciascuna slide, classificare ogni pagina con `pageType`, raggruppare intervalli coerenti, stimare difficoltà/importanza/tempo, scrivere i tre livelli di spiegazione e infine produrre attività con riferimenti puntuali. Controllare che nessun ID o riferimento sia orfano. L’esempio completo è in [`STUDY_PACKAGE_EXAMPLE.study`](./STUDY_PACKAGE_EXAMPLE.study).
+Vedi `STUDY_PACKAGE_EXAMPLE.study` per un file completo e `CHATGPT_STUDY_PACKAGE_PROMPT.md` per il prompt autonomo da usare insieme al PDF.

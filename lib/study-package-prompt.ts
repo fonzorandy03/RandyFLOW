@@ -1,90 +1,49 @@
-export const STUDY_PACKAGE_PROMPT = `Analizza integralmente il PDF allegato, pagina per pagina, e crea un RandyFLOW Study Package v1.0.
+﻿export const STUDY_PACKAGE_PROMPT = `Analizza integralmente il PDF allegato, pagina per pagina, e crea un RandyFLOW Study Package v1.0.
 
-Restituisci esclusivamente un singolo oggetto JSON valido, senza Markdown, commenti o testo introduttivo. Il risultato verrà salvato con estensione .study.
+Restituisci esclusivamente un singolo oggetto JSON valido, senza blocchi Markdown, commenti o testo introduttivo. Il file sarà salvato con estensione .study.
 
-CONTROLLO OBBLIGATORIO DELLE PAGINE
-1. Prima di scrivere il JSON, conta le pagine reali del PDF e costruisci internamente un inventario numerato da 1 a pageCount.
-2. Analizza ogni pagina individualmente, comprese copertine, indici, separatori, bibliografie, esercizi e pagine vuote o quasi vuote. Usa anche gli elementi visivi, non soltanto il testo estratto.
-3. Non saltare, unire, duplicare o rinumerare pagine. I riferimenti devono coincidere con il numero mostrato dal lettore PDF.
-4. Crea esattamente un topic per ogni pagina: slideRange.from e slideRange.to devono entrambi corrispondere a quella pagina.
-5. Prima di rispondere, verifica che l'insieme dei topic copra esattamente tutte le pagine da 1 a pageCount, senza buchi e senza sovrapposizioni.
-6. Classifica ogni pagina con pageType: content, cover, index, section-divider, blank, references oppure exercise. Basa la classificazione sul contenuto visibile della singola pagina.
-7. Se una pagina ? illeggibile o priva di contenuto didattico, dichiaralo fedelmente nei contenuti di quella pagina. Non inventare informazioni.
+CONTROLLO VISIVO E TESTUALE OBBLIGATORIO
+1. Conta le pagine reali e crea internamente un inventario numerato da 1 a pageCount.
+2. Esamina ogni pagina usando sia il testo estratto sia la resa visiva completa: titoli, immagini, diagrammi, formule, tabelle, densità e impaginazione.
+3. Non saltare, duplicare, accorpare o rinumerare pagine. Crea esattamente un topic per pagina, con slideRange.from = slideRange.to = numero originale del PDF.
+4. Classifica semanticamente ogni pagina con pageType: content, cover, index, separator, reference oppure empty.
+5. Imposta studyable=true soltanto per content realmente didattico. Per cover, index, separator, reference ed empty imposta sempre studyable=false.
+6. Se una pagina sembra un indice, una copertina o un separatore, non classificarla come content solo perché contiene testo.
+7. Prima di rispondere verifica la copertura esatta di tutte le pagine da 1 a pageCount, senza buchi o sovrapposizioni.
 
-PAGINE SPECIALI
-- cover: descrivi solo titolo, autore, corso e altri dati realmente visibili; non trasformarla in una lezione.
-- index: riporta fedelmente la struttura e le voci dell'indice, mantenendo eventuali numeri di pagina.
-- section-divider: indica il titolo della sezione e il suo ruolo nel documento.
-- blank: dichiara che la pagina ? vuota o priva di contenuto utile.
-- references: riporta e organizza esclusivamente le fonti presenti.
-- exercise: spiega consegna e dati presenti, senza inventare una soluzione non ricavabile dalla pagina.
-- Per queste pagine, quiz, flashcard e domanda d?esame devono verificare il ruolo o le informazioni realmente visibili nella pagina. Non inventare concetti disciplinari assenti.
+REGOLE PER PAGINE NON DIDATTICHE
+Per studyable=false usa difficulty=1, importance=1, estimatedMinutes=0, keyConcepts ed examples vuoti e quizIds, flashcardIds, examQuestionIds vuoti. Non creare quiz, flashcard o domande d'esame collegate. Descrivi fedelmente la funzione della pagina nelle spiegazioni e nel riassunto, senza inventare contenuti.
 
-CONTENUTO OBBLIGATORIO PER OGNI SINGOLA PAGINA
-- spiegazione simple, normal e deep riferita soltanto a ciò che compare in quella pagina;
-- summary specifico della pagina;
-- keyConcepts della pagina;
-- examples coerenti con la pagina e chiaramente indicati come esempi esplicativi quando non sono presenti nel PDF;
-- almeno un quiz sulla pagina, con risposta corretta, spiegazione e slideRefs contenente quella pagina;
-- almeno una flashcard sulla pagina, con domanda, risposta e slideRefs contenente quella pagina;
-- almeno una possibile domanda d'esame pertinente, con risposta modello, criteri di valutazione e riferimento alla pagina.
+CONTENUTO OBBLIGATORIO PER OGNI PAGINA DIDATTICA
+- Tre spiegazioni realmente didattiche e riferite solo alla pagina: simple chiara per un principiante; normal completa, con passaggi e collegamenti; deep approfondita, precisa e utile per preparare un esame.
+- Un summary sostanziale, non una sola frase generica.
+- Tutti i keyConcepts presenti o direttamente ricavabili dalla pagina.
+- Esempi coerenti. Se aggiungi un esempio non presente nel PDF, dichiaralo come esempio esplicativo.
+- Almeno un quiz con risposta, spiegazione e slideRefs della pagina.
+- Almeno una flashcard con domanda, risposta e slideRefs della pagina.
+- Almeno una possibile domanda d'esame con risposta modello, criteri e slideRefs della pagina.
+- Puoi usare Markdown dentro spiegazioni e summary: titoli ##/###, **grassetto**, elenchi e paragrafi.
 
-COERENZA OBBLIGATORIA
-- Ogni spiegazione, riassunto, concetto, esempio, quiz e flashcard deve essere coerente con la pagina indicata.
-- Non attribuire a una pagina contenuti presenti soltanto in altre pagine.
-- Mantieni formule, definizioni, nomi, unità di misura e relazioni logiche fedeli al PDF.
-- Quando una pagina dipende dalla precedente, spiega il collegamento senza spostare il contenuto da una pagina all'altra.
+COERENZA
+Ogni contenuto deve essere coerente con la pagina indicata. Non spostare contenuti da altre pagine. Mantieni formule, definizioni, nomi, unità di misura e relazioni logiche fedeli al PDF. Se una pagina dipende dalla precedente, spiega il collegamento senza attribuirle informazioni assenti.
 
-REQUISITI DEL PACKAGE
-- format = "randyflow-study-package" e version = "1.0";
-- packageId e tutti gli ID in kebab-case, stabili e univoci;
-- revision = 1 per il primo file; per un aggiornamento mantieni packageId e gli ID esistenti e incrementa revision;
-- includi exam e materials; pageCount deve essere il numero reale di pagine del PDF;
-- per ogni topic indica difficulty 1-5, importance 1-5 ed estimatedMinutes realistico;
-- per i quiz multiple, correctAnswer è l'indice zero-based dell'opzione corretta; per i quiz open è la risposta modello;
-- collega quizIds, flashcardIds ed examQuestionIds al topic della stessa pagina;
-- tutti i materialId, topicId e ID referenziati devono esistere;
-- non includere progresso personale, sessioni, risultati, mastery o statistiche.
+STRUTTURA
+Usa format "randyflow-study-package", version "1.0", ID stabili e univoci in kebab-case. Per aggiornare un package mantieni packageId e ID esistenti e incrementa revision. Non includere progresso, sessioni, risultati, mastery o statistiche.
 
-STRUTTURA JSON DA PRODURRE
-{
-  "format": "randyflow-study-package",
-  "version": "1.0",
-  "packageId": "...",
-  "revision": 1,
-  "generatedAt": "data ISO-8601",
-  "language": "it",
-  "exam": { "id": "...", "name": "...", "description": "...", "examDate": "YYYY-MM-DD oppure null" },
-  "materials": [{ "id": "...", "name": "nome PDF", "type": "pdf", "pageCount": 1 }],
-  "topics": [{
-    "id": "...", "materialId": "...", "name": "...", "pageType": "content",
-    "slideRange": { "from": 1, "to": 1 },
-    "difficulty": 1, "importance": 1, "estimatedMinutes": 1,
-    "explanations": { "simple": "...", "normal": "...", "deep": "..." },
-    "summary": "...", "keyConcepts": ["..."], "examples": ["..."],
-    "quizIds": ["..."], "flashcardIds": ["..."], "examQuestionIds": ["..."]
-  }],
-  "quizzes": [{
-    "id": "...", "topicId": "...", "type": "multiple oppure open", "prompt": "...",
-    "options": ["..."], "correctAnswer": 0, "acceptedKeywords": [],
-    "explanation": "...", "slideRefs": [1]
-  }],
-  "flashcards": [{ "id": "...", "topicId": "...", "front": "...", "back": "...", "slideRefs": [1] }],
-  "examQuestions": [{
-    "id": "...", "topicId": "...", "prompt": "...", "modelAnswer": "...",
-    "evaluationCriteria": ["..."], "slideRefs": [1]
-  }]
-}
+Ogni topic deve contenere: id, materialId, name, pageType, studyable, slideRange, difficulty, importance, estimatedMinutes, explanations {simple, normal, deep}, summary, keyConcepts, examples, quizIds, flashcardIds, examQuestionIds.
+Ogni quiz deve contenere id, topicId, type, prompt, options quando multiple, correctAnswer (indice zero-based per multiple), acceptedKeywords, explanation, slideRefs.
+Ogni flashcard deve contenere id, topicId, front, back, slideRefs.
+Ogni domanda d'esame deve contenere id, topicId, prompt, modelAnswer, evaluationCriteria, slideRefs.
 
-CONTROLLO FINALE PRIMA DELLA RISPOSTA
-- JSON parsabile e conforme a Study Package v1.0;
-- pageCount uguale al PDF;
-- numero di topic uguale a pageCount;
-- per ogni numero da 1 a pageCount esiste un solo topic con from = to = quel numero;
-- ogni topic contiene un pageType corretto e ogni copertina, indice, separatore, pagina vuota, pagina di riferimenti o esercizio ? riconosciuta;
-- ogni pagina contiene tutte e tre le spiegazioni, summary, keyConcepts, examples, almeno un quiz, almeno una flashcard e almeno una domanda d'esame;
-- nessun ID duplicato o riferimento orfano;
-- tutti gli slideRefs sono validi e puntano alla pagina corretta;
-- nessun contenuto inventato o incoerente con la pagina.
+CONTROLLO FINALE
+- Il JSON è parsabile e conforme allo schema Study Package v1.0.
+- pageCount coincide con il PDF e ogni pagina ha un solo topic.
+- La classificazione deriva dal significato e dall'aspetto della pagina.
+- Tutti e soli i topic content didattici hanno studyable=true.
+- Ogni pagina didattica ha spiegazioni lunghe e utili, summary, concetti, esempi, quiz, flashcard e domanda d'esame.
+- Le pagine non didattiche hanno tempo 0 e nessuna attività.
+- Tutti gli ID e slideRefs esistono e puntano alla pagina originale corretta.
+- Hai ricontrollato l'ultima pagina e non ti sei fermato prima della fine.
+- Nessun contenuto è inventato o incoerente con la pagina.
 
-Non omettere nessun campo della struttura.`
+Non omettere campi e restituisci soltanto il JSON.`

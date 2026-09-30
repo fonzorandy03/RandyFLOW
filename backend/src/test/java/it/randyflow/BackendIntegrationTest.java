@@ -69,6 +69,31 @@ class BackendIntegrationTest {
     assertThat(result.attempts()).isGreaterThanOrEqualTo(3);
   }
 
+  @Test void excludesNonStudyPagesButKeepsOriginalPageNumbers() throws Exception {
+    packages.importPackage(packages.preview(example()).studyPackage());
+    var sessions = planner.sessions("economia");
+    assertThat(sessions).extracting(it.randyflow.dto.ApiDtos.SessionDto::slideFrom)
+        .containsExactlyInAnyOrder(2, 3, 4);
+    assertThat(core.exam("economia").totalSlides()).isEqualTo(3);
+    assertThat(core.material("economia-slide").studyablePages()).isEqualTo(3);
+    core.complete("economia-slide", 1, null);
+    assertThat(core.material("economia-slide").pagesRead()).isZero();
+    core.complete("economia-slide", 2, null);
+    assertThat(core.material("economia-slide").pagesRead()).isEqualTo(1);
+    assertThat(learning.mastery("economia").stream().map(it.randyflow.dto.ApiDtos.MasteryDto::id).toList())
+        .containsExactly("economia-costi");
+  }
+
+  @Test void importsLegacyTopicsWithoutClassificationFields() throws Exception {
+    String legacy = example()
+        .replace("\"pageType\": \"content\",", "")
+        .replace("\"studyable\": true,", "");
+    var preview = packages.preview(legacy);
+    var topic = preview.studyPackage().topics().stream().filter(t -> t.id().equals("economia-costi")).findFirst().orElseThrow();
+    assertThat(topic.pageType()).isEqualTo("content");
+    assertThat(topic.studyable()).isTrue();
+  }
+
   @Test void validatesCrossReferencesAndReadsRealPdfPageCount() throws Exception {
     String invalid = example().replace("\"topicId\": \"economia-costi\"", "\"topicId\": \"missing\"");
     assertThatThrownBy(() -> packages.preview(invalid)).isInstanceOf(ApiException.class);
