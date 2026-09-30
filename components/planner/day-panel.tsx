@@ -16,7 +16,7 @@ export function DayPanel({ date, session, exam }: { date: ISODate; session?: Stu
     date <= TODAY &&
     session.slideFrom !== undefined &&
     ['planned', 'rescheduled'].includes(session.status)
-  const docId = exam.documentIds[0]
+  const docId = session?.materialId ?? exam.documentIds[0]
 
   return (
     <aside
@@ -62,6 +62,7 @@ export function DayPanel({ date, session, exam }: { date: ISODate; session?: Stu
                   ? `Slide ${session.slideFrom}–${session.slideTo}`
                   : 'Ripasso'}
               </p>
+              {session.materialName && <p className="text-xs font-medium text-primary">{session.materialName}</p>}
               {session.topic && <p className="text-sm text-muted-foreground">{session.topic}</p>}
             </div>
             {session.note && (

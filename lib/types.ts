@@ -52,6 +52,8 @@ export interface StudyTask {
 export interface StudySession {
   id: string
   examId: string
+  materialId?: string
+  materialName?: string
   date: ISODate
   status: SessionStatus
   topic?: string

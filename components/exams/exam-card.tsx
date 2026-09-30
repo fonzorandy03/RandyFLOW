@@ -49,7 +49,7 @@ export function ExamCard({ exam, next }: { exam: Exam; next?: StudySession }) {
           <span className="text-xs text-muted-foreground">Prossima sessione</span>
           <span className="truncate text-sm font-medium">
             {next
-              ? `${relativeDay(next.date)} · ${
+              ? `${relativeDay(next.date)} · ${next.materialName ? `${next.materialName} · ` : ''}${
                   next.slideFrom !== undefined
                     ? `slide ${next.slideFrom}–${next.slideTo}`
                     : (next.topic ?? 'Ripasso')

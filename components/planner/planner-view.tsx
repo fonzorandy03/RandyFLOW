@@ -56,7 +56,7 @@ export function PlannerView() {
     )
 
   const adjustment = adjustments?.find((a) => a.examId === exam.id)
-  const selectedSession = sessions?.find((s) => s.date === selected)
+  const selectedSessions = sessions?.filter((s) => s.date === selected) ?? []
 
   return (
     <PageContainer>
@@ -139,7 +139,11 @@ export function PlannerView() {
               selected={selected}
               onSelect={setSelected}
             />
-            <DayPanel date={selected} session={selectedSession} exam={exam} />
+            <div className="flex flex-col gap-4">
+              {selectedSessions.length ? selectedSessions.map((session) => (
+                <DayPanel key={session.id} date={selected} session={session} exam={exam} />
+              )) : <DayPanel date={selected} exam={exam} />}
+            </div>
           </div>
         ) : (
           <PlanTimeline sessions={sessions} />

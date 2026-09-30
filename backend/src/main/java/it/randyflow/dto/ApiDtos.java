@@ -15,7 +15,7 @@ public final class ApiDtos { private ApiDtos() {}
  public record StudyLogInput(@NotBlank String examId,@NotBlank String documentId,@Min(1) int fromPage,@Min(1) int toPage,@Min(1) int minutes,@NotBlank String label) {}
  public record StudyLogDto(String id,String examId,String documentId,LocalDate date,int fromPage,int toPage,int minutes,String label) {}
  public record TaskDto(String id,String kind,String label,int durationMin,boolean done,String meta) {}
- public record SessionDto(String id,String examId,LocalDate date,String status,String topic,Integer slideFrom,Integer slideTo,Integer slidesDone,Integer nextPage,int durationMin,Integer previousDurationMin,List<TaskDto> tasks,String note) {}
+ public record SessionDto(String id,String examId,String materialId,String materialName,LocalDate date,String status,String topic,Integer slideFrom,Integer slideTo,Integer slidesDone,Integer nextPage,int durationMin,Integer previousDurationMin,List<TaskDto> tasks,String note) {}
  public record QuizDto(String id,String type,String prompt,List<String> options,Integer correctIndex,List<String> acceptedKeywords,String modelAnswer,String explanation,int slideRef,String topicId,String topicName) {}
  public record QuizAnswer(@NotBlank String questionId,boolean correct,String given) {}
  public record QuizSubmission(@NotNull List<@jakarta.validation.Valid QuizAnswer> answers) {}

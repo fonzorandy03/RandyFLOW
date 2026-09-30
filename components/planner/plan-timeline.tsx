@@ -62,6 +62,9 @@ export function PlanTimeline({ sessions }: { sessions: StudySession[] }) {
                             ? 'Non disponibile'
                             : (s.topic ?? 'Ripasso')}
                     </span>
+                    {s.materialName && s.slideFrom !== undefined && (
+                      <span className="truncate text-xs font-medium text-primary">{s.materialName}</span>
+                    )}
                     {s.topic && s.slideFrom !== undefined && (
                       <span className="truncate text-xs text-muted-foreground">{s.topic}</span>
                     )}

@@ -94,6 +94,20 @@ class BackendIntegrationTest {
     assertThat(topic.studyable()).isTrue();
   }
 
+  @Test void plansEveryMaterialAndKeepsTheirPageNumbersSeparate() {
+    var exam = core.create(new it.randyflow.dto.ApiDtos.NewExam("Due dispense", java.time.LocalDate.now().plusDays(20), "", java.util.List.of(
+        new it.randyflow.dto.ApiDtos.DocumentInput("Parte A.pdf", 30),
+        new it.randyflow.dto.ApiDtos.DocumentInput("Parte B.pdf", 20)), java.util.Map.of(1, 60, 2, 60, 3, 60, 4, 60, 5, 60, 6, 60), java.util.List.of(), 3));
+    var sessions = planner.sessions(exam.id());
+    assertThat(sessions.stream().map(it.randyflow.dto.ApiDtos.SessionDto::materialId).distinct().toList())
+        .containsExactlyInAnyOrderElementsOf(exam.documentIds());
+    assertThat(sessions).allSatisfy(session -> {
+      assertThat(session.materialName()).isNotBlank();
+      assertThat(session.slideTo() - session.slideFrom() + 1).isGreaterThan(1);
+    });
+    assertThat(sessions.stream().filter(s -> s.materialId().equals(exam.documentIds().get(1))).mapToInt(it.randyflow.dto.ApiDtos.SessionDto::slideTo).max()).hasValue(20);
+  }
+
   @Test void validatesCrossReferencesAndReadsRealPdfPageCount() throws Exception {
     String invalid = example().replace("\"topicId\": \"economia-costi\"", "\"topicId\": \"missing\"");
     assertThatThrownBy(() -> packages.preview(invalid)).isInstanceOf(ApiException.class);

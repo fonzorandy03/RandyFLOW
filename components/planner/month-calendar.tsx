@@ -33,7 +33,8 @@ export function MonthCalendar({
 }) {
   const start = parseISO(selected)
   const [cursor, setCursor] = useState({ y: start.getUTCFullYear(), m: start.getUTCMonth() })
-  const byDate = new Map(sessions.map((s) => [s.date, s]))
+  const byDate = new Map<ISODate, StudySession[]>()
+  for (const session of sessions) byDate.set(session.date, [...(byDate.get(session.date) ?? []), session])
   const cells = monthGrid(cursor.y, cursor.m)
 
   const shift = (delta: number) =>
@@ -73,7 +74,8 @@ export function MonthCalendar({
                   className="min-h-16 border-b border-r border-border bg-muted/30 md:min-h-24"
                 />
               )
-            const s = byDate.get(date)
+            const daySessions = byDate.get(date) ?? []
+            const s = daySessions[0]
             const isExam = date === examDate
             const status = isExam ? 'exam' : s?.status
             const isSel = date === selected
@@ -115,15 +117,17 @@ export function MonthCalendar({
                     >
                       {isExam
                         ? 'Esame'
-                        : s?.slideFrom !== undefined
-                          ? `${s.slideFrom}–${s.slideTo}`
+                        : daySessions.length > 1
+                          ? `${daySessions.length} sessioni`
+                          : s?.slideFrom !== undefined
+                            ? `${s.slideFrom}–${s.slideTo}`
                           : status === 'review'
                             ? 'Ripasso'
                             : SESSION_STATUS[status].label}
                     </span>
                     {s && !isExam && (
                       <span className="tabular hidden text-[11px] text-muted-foreground md:block">
-                        {formatDuration(s.durationMin)}
+                        {formatDuration(daySessions.reduce((sum, item) => sum + item.durationMin, 0))}
                       </span>
                     )}
                   </>

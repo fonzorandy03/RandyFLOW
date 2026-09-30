@@ -72,6 +72,7 @@ export function ExamDetail({ id }: { id: string }) {
   const docs = documents?.filter((d) => exam.documentIds.includes(d.id)) ?? []
   const upcoming = (sessions ?? []).filter((s) => s.date >= TODAY && s.status !== 'unavailable').slice(0, 6)
   const todaySession = sessions?.find((s) => s.date === TODAY)
+  const continueDoc = docs.find((doc) => doc.id === todaySession?.materialId) ?? docs[0]
   const adjustment = adjustments?.find((a) => a.examId === exam.id)
   const weak = mastery?.filter((m) => m.needsReview) ?? []
   const weeklyMin = WEEKDAY_ORDER.reduce<number>((s, d) => s + exam.availability[d], 0)
@@ -103,10 +104,10 @@ export function ExamDetail({ id }: { id: string }) {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {docs[0] && (
+              {continueDoc && (
                 <Button
                   component={Link}
-                  href={studyHref(docs[0].id, todaySession, docs[0].lastPage)}
+                  href={studyHref(continueDoc.id, todaySession, continueDoc.lastPage)}
                   variant="contained"
                   startIcon={<BookOpen className="size-4" />}
                 >
@@ -192,6 +193,7 @@ export function ExamDetail({ id }: { id: string }) {
                             ? `Slide ${s.slideFrom}–${s.slideTo}`
                             : (s.topic ?? 'Ripasso')}
                         </p>
+                        {s.materialName && <p className="truncate text-xs font-medium text-primary">{s.materialName}</p>}
                         {s.topic && s.slideFrom !== undefined && (
                           <p className="truncate text-xs text-muted-foreground">{s.topic}</p>
                         )}

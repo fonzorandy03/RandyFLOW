@@ -36,6 +36,7 @@ export function UpcomingGoals({ sessions }: { sessions: StudySession[] }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{s.topic ?? status.label}</p>
+                {s.materialName && <p className="truncate text-xs font-medium text-primary">{s.materialName}</p>}
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   {relativeDay(s.date)}
                   {s.slideFrom !== undefined && ` · Slide ${s.slideFrom}–${s.slideTo}`}
