@@ -43,6 +43,7 @@ Ogni materiale richiede `id`, `name`, `type` (`pdf`, `slides` o `notes`) e `page
 Ogni argomento richiede:
 
 - `id`, `materialId`, `name`;
+- `pageType`, che classifica la pagina come `content`, `cover`, `index`, `section-divider`, `blank`, `references` oppure `exercise`;
 - `slideRange` con `from` e `to` inclusivi, interi positivi;
 - `difficulty` e `importance`, interi da 1 a 5;
 - `estimatedMinutes`, minuti interi positivi necessari per studiare l’intero intervallo;
@@ -51,6 +52,8 @@ Ogni argomento richiede:
 - `quizIds[]`, `flashcardIds[]`, `examQuestionIds[]`, contenenti solo ID esistenti.
 
 Gli intervalli devono coprire le slide utili senza uscire da `pageCount`. Se una slide appartiene a un argomento, l’Assistente di Studio mostra automaticamente quel contenuto. Le tre spiegazioni devono trattare lo stesso argomento con profondità crescente. Il riassunto deve essere autonomo; concetti ed esempi devono essere specifici e verificabili nelle slide.
+
+`pageType` ? facoltativo per mantenere compatibili i package v1.0 gi? creati; se manca, l'app usa `content`. Nei nuovi package deve essere sempre presente. Copertine, indici, separatori, pagine vuote, riferimenti ed esercizi devono avere un topic dedicato alla singola pagina. I contenuti associati devono descrivere fedelmente ci? che appare: una copertina non va trattata come una lezione e una pagina vuota non deve generare nozioni inventate.
 
 ### `quizzes`
 
@@ -81,4 +84,4 @@ Ogni elemento richiede `id`, `topicId`, `prompt`, `modelAnswer`, `evaluationCrit
 
 ## Procedura consigliata dal PDF
 
-Leggere tutte le pagine, rilevare titolo e numero effettivo di ciascuna slide, raggruppare intervalli coerenti, stimare difficoltà/importanza/tempo, scrivere i tre livelli di spiegazione e infine produrre attività con riferimenti puntuali. Controllare che nessun ID o riferimento sia orfano. L’esempio completo è in [`STUDY_PACKAGE_EXAMPLE.study`](./STUDY_PACKAGE_EXAMPLE.study).
+Leggere tutte le pagine, rilevare titolo e numero effettivo di ciascuna slide, classificare ogni pagina con `pageType`, raggruppare intervalli coerenti, stimare difficoltà/importanza/tempo, scrivere i tre livelli di spiegazione e infine produrre attività con riferimenti puntuali. Controllare che nessun ID o riferimento sia orfano. L’esempio completo è in [`STUDY_PACKAGE_EXAMPLE.study`](./STUDY_PACKAGE_EXAMPLE.study).

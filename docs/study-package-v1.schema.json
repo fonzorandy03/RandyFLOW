@@ -93,6 +93,7 @@
         "id": { "$ref": "#/$defs/id" },
         "materialId": { "$ref": "#/$defs/id" },
         "name": { "$ref": "#/$defs/nonEmpty" },
+        "pageType": { "enum": ["content", "cover", "index", "section-divider", "blank", "references", "exercise"] },
         "slideRange": { "$ref": "#/$defs/range" },
         "difficulty": { "type": "integer", "minimum": 1, "maximum": 5 },
         "importance": { "type": "integer", "minimum": 1, "maximum": 5 },

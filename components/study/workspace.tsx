@@ -16,6 +16,15 @@ import { SlideContent } from './slide-content'
 
 type AssistantTab = 'Spiegazione' | 'Riassunto' | 'Concetti' | 'Esempi' | 'Quiz' | 'Flashcard'
 const assistantTabs: AssistantTab[] = ['Spiegazione', 'Riassunto', 'Concetti', 'Esempi', 'Quiz', 'Flashcard']
+const pageTypeLabels = {
+  content: 'Contenuto',
+  cover: 'Copertina',
+  index: 'Indice',
+  'section-divider': 'Separatore di sezione',
+  blank: 'Pagina vuota',
+  references: 'Riferimenti',
+  exercise: 'Esercizio',
+} as const
 
 export function Workspace({ id }: { id: string }) {
   const document = useDocument(id)
@@ -320,6 +329,11 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
               Slide {page}
               {topic ? ` · ${topic.name}` : ''}
             </p>
+            {topic && (
+              <span className="mt-2 inline-flex rounded-full border bg-muted px-2 py-1 text-xs font-medium">
+                {pageTypeLabels[topic.pageType ?? 'content']}
+              </span>
+            )}
           </div>
           <div role="tablist" className="flex flex-wrap gap-1 border-b p-2">
             {assistantTabs.map((item) => (

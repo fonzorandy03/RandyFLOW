@@ -167,6 +167,7 @@ export interface StudyPackageTopic {
   id: string
   materialId: string
   name: string
+  pageType?: 'content' | 'cover' | 'index' | 'section-divider' | 'blank' | 'references' | 'exercise'
   slideRange: SlideRange
   difficulty: StudyDifficulty
   importance: StudyDifficulty

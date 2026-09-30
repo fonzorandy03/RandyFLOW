@@ -132,6 +132,13 @@ function validateTopic(
   if (ids.has(id)) issues.push(`Argomento duplicato: ${id}.`)
   ids.add(id)
   if (!materialIds.has(String(value.materialId))) issues.push(`topics[${index}].materialId non esiste.`)
+  if (
+    value.pageType !== undefined &&
+    !['content', 'cover', 'index', 'section-divider', 'blank', 'references', 'exercise'].includes(
+      String(value.pageType),
+    )
+  )
+    issues.push(`topics[${index}].pageType non valido.`)
   const range = value.slideRange
   if (
     !object(range) ||
