@@ -7,6 +7,7 @@ import { PageContainer } from '@/components/layout/app-shell'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/common/states'
 import { PlanAdjustmentNotice } from '@/components/plan/plan-adjustment-notice'
 import { planApi } from '@/lib/api/services'
+import { ApiError } from '@/lib/api/http'
 import { TODAY, formatWeekdayLong } from '@/lib/date'
 import { keys, useAdjustments, useExams, useMastery, useStudent, useToday } from '@/lib/hooks'
 import { mutate } from 'swr'
@@ -29,6 +30,9 @@ export function TodayView() {
   const { data: exams } = useExams()
 
   if (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return <PageContainer><header className="mb-8"><p className="text-sm font-medium text-primary">Il tuo spazio</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Cominciamo dal primo esame</h1><p className="mt-2 text-sm text-muted-foreground">Aggiungi un esame oppure importa uno Study Package per creare il tuo piano.</p></header><EmptyState icon={Plus} title="Nessun esame ancora" description="Carica i materiali e indica la data: RandyFLOW preparerà il calendario di studio." action={<Button component={Link} href="/esami/nuovo" variant="contained">Aggiungi il primo esame</Button>} /></PageContainer>
+    }
     return (
       <PageContainer>
         <ErrorState onRetry={() => reload()} />

@@ -7,6 +7,17 @@ const BASE_URL = configuredBase
 
 /** Mock data is available only when explicitly enabled for tests or demos. */
 export const USE_MOCKS = process.env.NEXT_PUBLIC_DATA_MODE === 'mock'
+export const AUTH_TOKEN_KEY = 'randyflow-auth-token'
+
+export function getAuthToken() {
+  return typeof window === 'undefined' ? null : localStorage.getItem(AUTH_TOKEN_KEY)
+}
+
+export function setAuthToken(token: string | null) {
+  if (typeof window === 'undefined') return
+  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token)
+  else localStorage.removeItem(AUTH_TOKEN_KEY)
+}
 
 export class ApiError extends Error {
   constructor(
@@ -23,7 +34,10 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: {
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
       credentials: 'include',
       signal,
@@ -34,6 +48,7 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   }
   if (!res.ok) {
     const problem = (await res.json().catch(() => null)) as { message?: string } | null
+    if (res.status === 401 && typeof window !== 'undefined') window.dispatchEvent(new Event('randyflow:unauthorized'))
     throw new ApiError(problem?.message ?? `Richiesta non riuscita (${res.status})`, res.status)
   }
   if (res.status === 204) return undefined as T
@@ -51,7 +66,12 @@ export const http = {
     body.append('file', file)
     let res: Response
     try {
-      res = await fetch(`${BASE_URL}${path}`, { method: 'POST', body, credentials: 'include' })
+      res = await fetch(`${BASE_URL}${path}`, {
+        method: 'POST',
+        body,
+        credentials: 'include',
+        headers: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : undefined,
+      })
     } catch {
       throw new ApiError('Backend non raggiungibile. Controlla la connessione e riprova.', 0)
     }

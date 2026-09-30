@@ -10,12 +10,14 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useStudent } from '@/lib/hooks'
 import { useToast } from '../common/toast'
+import { useAuth } from '@/lib/auth'
 
 export function UserMenu() {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const { data: student } = useStudent()
   const router = useRouter()
   const toast = useToast()
+  const { logout } = useAuth()
   const go = (href: string) => {
     setAnchor(null)
     router.push(href)
@@ -60,7 +62,7 @@ export function UserMenu() {
         <MenuItem
           onClick={() => {
             setAnchor(null)
-            toast('Disconnessione disponibile quando il backend sarà collegato.', 'info')
+            void logout().catch(() => toast('Non è stato possibile chiudere la sessione.', 'info'))
           }}
         >
           <LogOut className="size-4 text-muted-foreground" /> Esci

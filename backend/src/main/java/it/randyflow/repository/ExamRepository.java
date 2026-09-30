@@ -1,1 +1,1 @@
-package it.randyflow.repository; import it.randyflow.domain.ExamEntity; import org.springframework.data.jpa.repository.JpaRepository; public interface ExamRepository extends JpaRepository<ExamEntity,String> {}
+package it.randyflow.repository; import it.randyflow.domain.ExamEntity; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface ExamRepository extends JpaRepository<ExamEntity,String> { List<ExamEntity> findByOwnerIdOrderByCreatedAtDesc(String ownerId); Optional<ExamEntity> findByIdAndOwnerId(String id,String ownerId); }

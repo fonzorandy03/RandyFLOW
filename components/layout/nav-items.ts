@@ -1,7 +1,7 @@
 import { BookOpen, CalendarDays, ChartColumn, GraduationCap, House, Settings, User } from 'lucide-react'
 
 export const PRIMARY_NAV = [
-  { href: '/', label: 'Oggi', icon: House },
+  { href: '/dashboard', label: 'Oggi', icon: House },
   { href: '/esami', label: 'I miei esami', short: 'Esami', icon: GraduationCap },
   { href: '/planner', label: 'Planner', icon: CalendarDays },
   { href: '/studio', label: 'Studio', icon: BookOpen },
@@ -14,5 +14,5 @@ export const SECONDARY_NAV = [
 ] as const
 
 export function isActive(pathname: string, href: string) {
-  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+  return pathname === href || pathname.startsWith(`${href}/`)
 }

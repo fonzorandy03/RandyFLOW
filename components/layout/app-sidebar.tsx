@@ -75,7 +75,7 @@ export function AppSidebar() {
       <div
         className={cn('flex h-14 items-center px-4', collapsed ? 'justify-center px-0' : 'justify-between')}
       >
-        <Link href="/" aria-label="RandyFLOW, vai a Oggi" className="rounded-md">
+        <Link href="/dashboard" aria-label="RandyFLOW, vai a Oggi" className="rounded-md">
           <Logo collapsed={collapsed} />
         </Link>
         {!collapsed && (

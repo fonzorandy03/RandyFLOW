@@ -18,8 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.security.web.FilterChainProxy;
 
 @SpringBootTest
 @Transactional
@@ -29,7 +32,9 @@ class BackendIntegrationTest {
   @Autowired PlannerService planner;
   @Autowired LearningService learning;
   @Autowired ApplicationRepository data;
+  @Autowired AuthService auth;
   @Autowired WebApplicationContext web;
+  @Autowired FilterChainProxy springSecurityFilterChain;
 
   private String example() throws Exception {
     return Files.readString(Path.of("..", "docs", "STUDY_PACKAGE_EXAMPLE.study"));
@@ -81,5 +86,31 @@ class BackendIntegrationTest {
     mvc.perform(post("/api/v1/study-packages/preview").contentType("application/json").content(example()))
         .andExpect(status().isOk()).andExpect(jsonPath("$.summary.packageId").value("economia-esempio"));
     mvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+  }
+
+  @Test void separatesDataBetweenRegisteredUsers() throws Exception {
+    var first = auth.register(new it.randyflow.dto.AuthDtos.RegisterRequest("Anna", "Verdi", "anna@example.com", "Password123!"));
+    SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(first.user().id(), null, java.util.List.of()));
+    core.create(new it.randyflow.dto.ApiDtos.NewExam("Analisi", java.time.LocalDate.now().plusMonths(2), "", java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("Slide", 10)), java.util.Map.of(1, 60), java.util.List.of(), 2));
+    var firstPackage = packages.importPackage(packages.preview(example()).studyPackage());
+    assertThat(core.exams()).hasSize(2);
+
+    var second = auth.register(new it.randyflow.dto.AuthDtos.RegisterRequest("Luca", "Neri", "luca@example.com", "Password123!"));
+    SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(second.user().id(), null, java.util.List.of()));
+    assertThat(core.exams()).isEmpty();
+    var secondPackage = packages.importPackage(packages.preview(example()).studyPackage());
+    assertThat(secondPackage.examId()).isNotEqualTo(firstPackage.examId());
+    assertThat(core.exams()).hasSize(1);
+    SecurityContextHolder.clearContext();
+  }
+
+  @Test void protectsApiAndAcceptsBearerSession() throws Exception {
+    MockMvc secureMvc=MockMvcBuilders.webAppContextSetup(web).addFilters(springSecurityFilterChain).build();
+    secureMvc.perform(get("/api/v1/exams")).andExpect(status().isUnauthorized());
+    String body=secureMvc.perform(post("/api/v1/auth/register").contentType("application/json").content("""
+      {"firstName":"Marta","lastName":"Blu","email":"marta@example.com","password":"Password123!"}
+      """)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+    String token=new com.fasterxml.jackson.databind.ObjectMapper().readTree(body).get("token").asText();
+    secureMvc.perform(get("/api/v1/exams").header("Authorization","Bearer "+token)).andExpect(status().isOk()).andExpect(content().json("[]"));
   }
 }
