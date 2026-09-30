@@ -5,6 +5,7 @@
   "packageManager": "pnpm@12.3.4",
   "scripts": {
     "test": "tsx --test tests/*.test.ts",
+    "test:e2e:real": "tsx tests/real-backend.e2e.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "dev": "next dev",

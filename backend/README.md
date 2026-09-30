@@ -2,21 +2,21 @@
 
 Backend REST di RandyFLOW basato su Java 17, Spring Boot, Spring Data JPA, Flyway e PostgreSQL.
 
-## Avvio locale
+## PostgreSQL e avvio locale
 
-Creare un database PostgreSQL e impostare, se diversi dai valori predefiniti:
+Con PostgreSQL 18 installato nel percorso standard, inizializzare un cluster locale isolato sulla porta 5433 e avviare il backend:
 
 ```powershell
-$env:DATABASE_URL = "jdbc:postgresql://localhost:5432/randyflow"
-$env:DATABASE_USERNAME = "randyflow"
-$env:DATABASE_PASSWORD = "randyflow"
-mvn spring-boot:run
+./backend/scripts/setup-local-postgres.ps1
+./backend/scripts/start-backend.ps1
 ```
+
+Lo script genera una password casuale e la salva in `backend/.env.local`, escluso da Git. Spring Boot non contiene password predefinite. Flyway applica automaticamente le migrazioni all'avvio.
 
 Il frontend usa il backend quando viene avviato con:
 
 ```powershell
-$env:NEXT_PUBLIC_API_BASE_URL = "http://localhost:8080"
+$env:NEXT_PUBLIC_API_BASE_URL = "http://localhost:8081"
 npm.cmd run dev
 ```
 
