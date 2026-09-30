@@ -3,9 +3,9 @@
 ## Architettura
 
 - Frontend Next.js: Vercel, `https://randyflow.vercel.app`.
-- Backend: un servizio container pubblico costruito da `backend/Dockerfile`.
-- Database: PostgreSQL gestito con storage persistente e backup abilitati.
-- PDF: volume persistente montato nel container in `/data/uploads`.
+- Backend: Render Free, costruito da `backend/Dockerfile` tramite `render.yaml`.
+- Database: PostgreSQL Supabase Free.
+- PDF: bucket privato Supabase Storage `study-materials`.
 
 Il backend e il database non devono essere pubblicati nello stesso servizio Vercel del frontend.
 
@@ -19,7 +19,10 @@ DATABASE_URL=jdbc:postgresql://HOST:5432/DATABASE?sslmode=require
 DATABASE_USERNAME=USERNAME
 DATABASE_PASSWORD=PASSWORD
 CORS_ALLOWED_ORIGINS=https://randyflow.vercel.app
-STORAGE_PATH=/data/uploads
+STORAGE_PROVIDER=supabase
+SUPABASE_URL=https://PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=SECRET
+SUPABASE_STORAGE_BUCKET=study-materials
 PORT=8080
 JAVA_OPTS=-XX:MaxRAMPercentage=75
 ```
@@ -35,7 +38,7 @@ docker build -t randyflow-backend .
 Avvio locale dell'immagine:
 
 ```bash
-docker run --rm -p 8080:8080 --env-file .env.production -v randyflow-pdf:/data/uploads randyflow-backend
+docker run --rm -p 8080:8080 --env-file .env.production randyflow-backend
 ```
 
 Health check del provider:
@@ -50,7 +53,7 @@ Flyway applica le migrazioni all'avvio. `ddl-auto=validate` verifica che lo sche
 
 Creare database e utente dedicati a RandyFLOW. Il servizio deve offrire TLS; usare `sslmode=require` nella JDBC URL. Limitare l'accesso di rete al backend quando il provider lo permette. Abilitare backup automatici e conservazione adeguata.
 
-Il volume `/data/uploads` è obbligatorio per conservare i PDF dopo riavvii o nuovi deploy. In alternativa futura, sostituire lo storage locale con un object storage compatibile S3.
+In produzione i PDF vengono salvati nel bucket privato Supabase Storage. La service role key rimane esclusivamente nel backend e non deve mai essere esposta a Vercel o al browser.
 
 ## Vercel
 

@@ -19,8 +19,12 @@ server:
   forward-headers-strategy: framework
   shutdown: graceful
 randyflow:
+  storage-provider: ${STORAGE_PROVIDER:local}
   storage-path: ${STORAGE_PATH:./storage}
   cors-origins: ${CORS_ALLOWED_ORIGINS:${CORS_ORIGIN:http://localhost:3000}}
+  supabase-url: ${SUPABASE_URL:}
+  supabase-service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+  supabase-storage-bucket: ${SUPABASE_STORAGE_BUCKET:study-materials}
 management:
   endpoints.web.exposure.include: health,info
   endpoint.health.probes.enabled: true
