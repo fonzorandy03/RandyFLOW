@@ -9,4 +9,4 @@ spring:
   flyway.locations: classpath:db/migration
 randyflow:
   storage-path: ${java.io.tmpdir}/randyflow-tests
-  cors-origin: http://localhost:3000
+  cors-origins: http://localhost:3000

@@ -9,15 +9,20 @@ npm install
 npm run dev
 ```
 
-Senza configurazione esterna il frontend usa i dati dimostrativi locali. Per collegarlo al backend:
+Il frontend usa le API per impostazione predefinita. Per collegarlo al backend:
 
 ```text
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8081
+NEXT_PUBLIC_DATA_MODE=api
 ```
+
+I dati dimostrativi sono disponibili solo impostando esplicitamente `NEXT_PUBLIC_DATA_MODE=mock`.
 
 ## Backend
 
 Il backend Spring Boot e le istruzioni PostgreSQL sono in [`backend`](./backend/README.md).
+
+La preparazione per il deploy cloud è descritta in [`docs/PRODUCTION_DEPLOYMENT.md`](./docs/PRODUCTION_DEPLOYMENT.md).
 
 ## Study Package
 

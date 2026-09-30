@@ -5,8 +5,8 @@ const BASE_URL = configuredBase
     : `${configuredBase}/api/v1`
   : undefined
 
-/** When no REST backend is configured the services resolve against the in-memory mock store. */
-export const USE_MOCKS = !BASE_URL
+/** Mock data is available only when explicitly enabled for tests or demos. */
+export const USE_MOCKS = process.env.NEXT_PUBLIC_DATA_MODE === 'mock'
 
 export class ApiError extends Error {
   constructor(
@@ -18,13 +18,20 @@ export class ApiError extends Error {
 }
 
 async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include',
-    signal,
-  })
+  if (!BASE_URL) throw new ApiError('Backend non configurato. Imposta NEXT_PUBLIC_API_BASE_URL.', 0)
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+      signal,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new ApiError('Backend non raggiungibile. Controlla la connessione e riprova.', 0)
+  }
   if (!res.ok) {
     const problem = (await res.json().catch(() => null)) as { message?: string } | null
     throw new ApiError(problem?.message ?? `Richiesta non riuscita (${res.status})`, res.status)
@@ -39,9 +46,15 @@ export const http = {
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
   upload: async <T>(path: string, file: File) => {
+    if (!BASE_URL) throw new ApiError('Backend non configurato. Imposta NEXT_PUBLIC_API_BASE_URL.', 0)
     const body = new FormData()
     body.append('file', file)
-    const res = await fetch(`${BASE_URL}${path}`, { method: 'POST', body, credentials: 'include' })
+    let res: Response
+    try {
+      res = await fetch(`${BASE_URL}${path}`, { method: 'POST', body, credentials: 'include' })
+    } catch {
+      throw new ApiError('Backend non raggiungibile. Controlla la connessione e riprova.', 0)
+    }
     if (!res.ok) {
       const problem = (await res.json().catch(() => null)) as { message?: string } | null
       throw new ApiError(problem?.message ?? `Upload non riuscito (${res.status})`, res.status)

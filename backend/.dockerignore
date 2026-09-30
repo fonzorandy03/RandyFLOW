@@ -1,0 +1,5 @@
+target
+storage
+.local
+.env.local
+*.log

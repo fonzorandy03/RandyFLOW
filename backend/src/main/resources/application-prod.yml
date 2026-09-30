@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    hibernate.ddl-auto: validate
+  flyway:
+    enabled: true
+    clean-disabled: true
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+management:
+  endpoint:
+    health:
+      show-details: never

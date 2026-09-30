@@ -48,7 +48,7 @@ if ($exists -ne '1') {
   'DATABASE_USERNAME=randyflow'
   "DATABASE_PASSWORD=$password"
   'STORAGE_PATH=./storage'
-  'CORS_ORIGIN=http://localhost:3000'
+  'CORS_ALLOWED_ORIGINS=http://localhost:3000,https://randyflow.vercel.app'
   'SERVER_PORT=8081'
 ) | Set-Content -LiteralPath $environmentFile
 
