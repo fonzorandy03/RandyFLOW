@@ -1,6 +1,7 @@
 'use client'
 import Button from '@mui/material/Button'
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { mutate } from 'swr'
 import { studyPackageApi } from '@/lib/api/services'
 import { refreshPlanData } from '@/lib/hooks'
@@ -8,6 +9,7 @@ import { StudyPackageValidationError } from '@/lib/study-package'
 import type { Exam, StudyPackage, StudyPackageSummary } from '@/lib/types'
 
 export function StudyPackageImport({ exams }: { exams: Exam[] }) {
+  const router = useRouter()
   const input = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ package: StudyPackage; summary: StudyPackageSummary }>()
   const [issues, setIssues] = useState<string[]>([])
@@ -58,6 +60,7 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
       )
       setPreview(undefined)
       if (input.current) input.current.value = ''
+      router.push(`/esami/${encodeURIComponent(result.examId)}`)
     } catch (error) {
       setIssues([error instanceof Error ? error.message : 'Importazione non riuscita.'])
     } finally {

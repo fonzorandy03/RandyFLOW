@@ -11,7 +11,7 @@ export function ExamCard({ exam, next }: { exam: Exam; next?: StudySession }) {
 
   return (
     <Link
-      href={`/esami/${exam.id}`}
+      href={`/esami/${encodeURIComponent(exam.id)}`}
       className="group flex h-full flex-col gap-6 rounded-2xl border border-border bg-card p-5 transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_12px_32px_-18px_rgba(17,19,24,0.25)] md:p-6"
     >
       <div className="flex items-start justify-between gap-4">
