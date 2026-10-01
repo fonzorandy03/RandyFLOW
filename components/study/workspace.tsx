@@ -71,7 +71,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [assistantOpen, setAssistantOpen] = useState(true)
   const [readingMode, setReadingMode] = useState<'split' | 'pdf' | 'explanation'>('split')
   const [explanationLevel, setExplanationLevel] = useState('Semplice')
-  const [zoom, setZoom] = useState(doc.hasFile ? 0 : 100)
+  const [zoom, setZoom] = useState(100)
   const [outline, setOutline] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -85,7 +85,9 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [managePages, setManagePages] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const lesson = useRef<HTMLDivElement>(null)
-  useEffect(() => { lesson.current?.scrollTo({ top: 0 }) }, [page, assistantTab, explanationLevel])
+  useEffect(() => {
+    lesson.current?.scrollTo({ top: 0 })
+  }, [page, assistantTab, explanationLevel])
   const positionQueue = useRef(Promise.resolve())
   const savingRef = useRef(false)
   const { focus, setFocus } = useShell()
@@ -828,15 +830,17 @@ function AssistantContent({
     return (
       <div className="explanation-article">
         <h3 className="explanation-title">{topic.name}</h3>
-        {topic.studyable && topic.explanations[key].trim().split(/\s+/).length < 100 && (
-          <div className="explanation-quality-note">
-            <p>
-              Questa spiegazione importata è breve. Per una lezione completa, rigenera il file .study con il
-              nuovo prompt e aggiorna questa dispensa.
-            </p>
-            <Link href="/studio">Migliora i contenuti →</Link>
-          </div>
-        )}
+        {topic.studyable &&
+          (topic.explanations[key].trim().split(/\s+/).length < 100 ||
+            /[\u0000-\u0008\u000b\u000c\u000e-\u001f]|(?:…|\.\.\.)\s*$/.test(topic.explanations[key])) && (
+            <div className="explanation-quality-note">
+              <p>
+                Questa spiegazione importata sembra abbreviata o poco curata. Per una lezione completa,
+                rigenera il file .study con il nuovo prompt e aggiorna questa dispensa.
+              </p>
+              <Link href="/studio">Migliora i contenuti →</Link>
+            </div>
+          )}
         <MarkdownContent>{topic.explanations[key]}</MarkdownContent>
         <SlideRefs refs={refs} go={go} />
       </div>
