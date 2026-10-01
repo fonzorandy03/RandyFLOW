@@ -25,6 +25,8 @@ import { settingsApi, studyApi, studyPackageApi } from '@/lib/api/services'
 import { ApiError, USE_MOCKS } from '@/lib/api/http'
 import { refreshPlanData, useDocument, useDocuments, useSessions } from '@/lib/hooks'
 import { studyHref, studyPanelHref } from '@/lib/routes'
+import { documentDailyGoal } from '@/lib/study-goal'
+import { useCurrentDate } from '@/lib/use-current-date'
 import { compareMaterials } from '@/lib/materials'
 import { topicForSlide } from '@/lib/study-package'
 import type { StudyDocument } from '@/lib/types'
@@ -120,6 +122,8 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const { focus, setFocus } = useShell()
   const toast = useToast()
   const sessions = useSessions(doc.examId)
+  const today = useCurrentDate()
+  const dailyGoal = documentDailyGoal(doc, sessions.data ?? [], today, completed)
   const session = sessions.data?.find(
     (item) => item.id === params.get('session') && (!item.materialId || item.materialId === doc.id),
   )
@@ -438,6 +442,49 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           </button>
         </div>
       </div>
+      {detached && (
+        <section className="study-daily-goal" aria-label="Obiettivo giornaliero">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <Target size={16} className="text-primary" />
+              {dailyGoal.total > 0 && dailyGoal.done === dailyGoal.total
+                ? 'Obiettivo di oggi raggiunto'
+                : 'Obiettivo di oggi'}
+            </span>
+            {dailyGoal.total > 0 && (
+              <span className="text-xs tabular text-muted-foreground">
+                {dailyGoal.done} / {dailyGoal.total} pagine completate
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {sessions.error
+              ? 'Obiettivo non disponibile.'
+              : !today || !sessions.data
+                ? 'Carico il piano di oggi…'
+                : dailyGoal.total > 0
+                  ? `Pagine PDF ${dailyGoal.ranges} · questa dispensa`
+                  : 'Nessuna pagina prevista per oggi in questa dispensa. Puoi studiare in anticipo.'}
+            {sessions.error && (
+              <button className="ml-2 text-primary underline" onClick={() => void sessions.mutate()}>
+                Riprova
+              </button>
+            )}
+          </p>
+          {dailyGoal.total > 0 && (
+            <div
+              className="study-progress-track mt-2"
+              role="progressbar"
+              aria-label="Progresso dell’obiettivo giornaliero"
+              aria-valuemin={0}
+              aria-valuemax={dailyGoal.total}
+              aria-valuenow={dailyGoal.done}
+            >
+              <div style={{ width: `${dailyGoal.progress}%` }} />
+            </div>
+          )}
+        </section>
+      )}
       <div className={`study-panels reading-${readingMode} ${assistantOpen ? '' : 'reader-only'}`}>
         <section
           aria-label="Documento"

@@ -1293,8 +1293,15 @@
   height: 100dvh;
   min-height: 0;
   padding: 8px;
-  gap: 0;
+  gap: 8px;
   overflow: hidden;
+}
+.study-daily-goal {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
 }
 .is-floating .study-heading,
 .is-floating .study-reading-controls {
