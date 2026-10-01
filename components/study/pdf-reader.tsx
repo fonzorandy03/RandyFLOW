@@ -21,6 +21,7 @@ export function PdfReader({
   const text = useRef<HTMLDivElement>(null)
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
   const [width, setWidth] = useState(0)
+  const [height, setHeight] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   useLoadingIndicator(loading && !pdf, 'Apriamo la tua dispensa')
@@ -56,7 +57,10 @@ export function PdfReader({
   useEffect(() => {
     const element = container.current
     if (!element) return
-    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(200, entry.contentRect.width - 48)))
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.max(200, entry.contentRect.width - 48))
+      setHeight(Math.max(200, entry.contentRect.height - 48))
+    })
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
@@ -72,7 +76,11 @@ export function PdfReader({
       const sheet = await pdf.getPage(page)
       if (!active || !canvas.current || !text.current) return
       const base = sheet.getViewport({ scale: 1 })
-      const viewport = sheet.getViewport({ scale: ((Math.min(width, 1100) / base.width) * zoom) / 100 })
+      const scale =
+        zoom === 0
+          ? Math.min(width / base.width, height / base.height)
+          : ((Math.min(width, 1100) / base.width) * zoom) / 100
+      const viewport = sheet.getViewport({ scale })
       const ratio = Math.min(window.devicePixelRatio || 1, 2)
       canvas.current.width = Math.floor(viewport.width * ratio)
       canvas.current.height = Math.floor(viewport.height * ratio)
@@ -108,7 +116,7 @@ export function PdfReader({
       render?.cancel()
       layer?.cancel()
     }
-  }, [pdf, page, zoom, width])
+  }, [pdf, page, zoom, width, height])
   return (
     <div ref={container} className="pdf-stage scrollbar-thin" aria-busy={loading}>
       {loading && (

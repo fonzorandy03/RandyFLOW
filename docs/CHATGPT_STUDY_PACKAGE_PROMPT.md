@@ -25,6 +25,10 @@ REGOLE PER PAGINE NON DIDATTICHE
 Per studyable=false usa difficulty=1, importance=1, estimatedMinutes=0, keyConcepts ed examples vuoti e quizIds, flashcardIds, examQuestionIds vuoti. Non creare quiz, flashcard o domande d'esame collegate. Descrivi fedelmente la funzione della pagina nelle spiegazioni e nel riassunto, senza inventare contenuti.
 
 CONTENUTO OBBLIGATORIO PER OGNI PAGINA DIDATTICA
+La spiegazione simple deve essere una lezione completa per chi parte da zero: linguaggio elementare, frasi chiare e tutti i concetti della pagina spiegati senza prerequisiti impliciti. Semplice significa facile da capire, non breve o incompleta.
+Scrivi in Markdown, usando per ogni pagina le sezioni: ## L'idea di questa pagina; ## Partiamo dalle basi; ## Spiegazione passo per passo; ## Un esempio concreto; ## Cosa devi ricordare. Spiega ogni termine tecnico alla prima comparsa, ogni passaggio logico e ogni elemento di formule, tabelle o diagrammi. Mostra come si collegano tra loro.
+Non copiare il testo estratto dal PDF: ricostruisci frasi e paragrafi corretti, elimina caratteri di controllo e parole spezzate, interpreta il contenuto visivo. Non usare una frase introduttiva come spiegazione dell'intera pagina. Verifica che ciascun punto didattico presente nel PDF sia coperto. Se aggiungi analogie o esempi, indica che sono esplicativi; non inventare fatti mancanti.
+normal e deep devono essere anch'esse complete e autosufficienti. Il riassunto rimane distinto dalla spiegazione. La lunghezza deve essere quella necessaria a spiegare tutto: mai troncare una lezione per far entrare tutte le pagine in una risposta. Se non riesci a completare il file, dichiaralo e chiedi di procedere in blocchi; non consegnare un package apparentemente completo con spiegazioni abbreviate.
 - Tre spiegazioni realmente didattiche e riferite solo alla pagina: simple chiara per un principiante; normal completa, con passaggi e collegamenti; deep approfondita, precisa e utile per preparare un esame.
 - Un summary sostanziale, non una sola frase generica.
 - Tutti i keyConcepts presenti o direttamente ricavabili dalla pagina.

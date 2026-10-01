@@ -69,7 +69,9 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [mobileTab, setMobileTab] = useState<'document' | 'assistant'>('document')
   const [assistantTab, setAssistantTab] = useState<AssistantTab>('Spiegazione')
   const [assistantOpen, setAssistantOpen] = useState(true)
-  const [zoom, setZoom] = useState(100)
+  const [readingMode, setReadingMode] = useState<'split' | 'pdf' | 'explanation'>('split')
+  const [explanationLevel, setExplanationLevel] = useState('Semplice')
+  const [zoom, setZoom] = useState(doc.hasFile ? 0 : 100)
   const [outline, setOutline] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -82,6 +84,8 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [pdfAttempt, setPdfAttempt] = useState(0)
   const [managePages, setManagePages] = useState(false)
   const root = useRef<HTMLDivElement>(null)
+  const lesson = useRef<HTMLDivElement>(null)
+  useEffect(() => { lesson.current?.scrollTo({ top: 0 }) }, [page, assistantTab, explanationLevel])
   const positionQueue = useRef(Promise.resolve())
   const savingRef = useRef(false)
   const { focus, setFocus } = useShell()
@@ -334,7 +338,51 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           Assistente
         </button>
       </div>
-      <div className={`study-panels ${assistantOpen ? '' : 'reader-only'}`}>
+      <div className="study-reading-controls">
+        <div className="study-view-switch" aria-label="Modalità di lettura">
+          {(
+            [
+              ['split', 'PDF e spiegazione'],
+              ['pdf', 'Solo PDF'],
+              ['explanation', 'Solo spiegazione'],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              aria-pressed={readingMode === mode}
+              onClick={() => {
+                setReadingMode(mode)
+                setAssistantOpen(mode !== 'pdf')
+                setMobileTab(mode === 'explanation' ? 'assistant' : 'document')
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="study-icon"
+            aria-label="Pagina precedente"
+            disabled={page <= 1}
+            onClick={() => go(page - 1)}
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="text-sm tabular">
+            Pagina {page} / {doc.pages}
+          </span>
+          <button
+            className="study-icon"
+            aria-label="Pagina successiva"
+            disabled={page >= doc.pages}
+            onClick={() => go(page + 1)}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+      <div className={`study-panels reading-${readingMode} ${assistantOpen ? '' : 'reader-only'}`}>
         <section
           aria-label="Documento"
           className={`study-reader ${mobileTab === 'document' ? '' : 'mobile-hidden'}`}
@@ -402,9 +450,10 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
                 value={zoom}
                 onChange={(event) => setZoom(Number(event.target.value))}
               >
+                <option value={0}>Pagina intera</option>
                 {[75, 100, 125, 150, 200].map((value) => (
                   <option key={value} value={value}>
-                    {value === 100 ? 'Adatta' : `${value}%`}
+                    {value === 100 ? 'Adatta alla larghezza' : `${value}%`}
                   </option>
                 ))}
               </select>
@@ -419,7 +468,10 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
               <button
                 className="study-icon assistant-toggle"
                 aria-label={assistantOpen ? 'Nascondi assistente' : 'Mostra assistente'}
-                onClick={() => setAssistantOpen(!assistantOpen)}
+                onClick={() => {
+                  setReadingMode(assistantOpen ? 'pdf' : 'split')
+                  setAssistantOpen(!assistantOpen)
+                }}
                 title={assistantOpen ? 'Più spazio al documento' : 'Mostra assistente'}
               >
                 {assistantOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
@@ -587,13 +639,15 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
                   <Sparkles size={20} />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold">Il tuo compagno di studio</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">Comprendi, collega, ricorda.</p>
+                  <h2 className="text-base font-semibold">Capisci questa pagina</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Una spiegazione alla volta, senza fretta.
+                  </p>
                 </div>
               </div>
               <div className="assistant-context">
                 <span className="tabular">Pagina {page}</span>
-                <p className="truncate">{topic?.name ?? chapter?.title ?? 'Il tuo documento'}</p>
+                <p>{topic?.name ?? chapter?.title ?? 'Il tuo documento'}</p>
               </div>
             </div>
             {topic && (
@@ -610,7 +664,21 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
                 ))}
               </div>
             )}
-            <div className="assistant-content scrollbar-thin">
+            <div ref={lesson} className="assistant-content scrollbar-thin">
+              {topic && assistantTab === 'Spiegazione' && (
+                <div className="explanation-level">
+                  <label htmlFor="explanation-level">Come vuoi la spiegazione?</label>
+                  <select
+                    id="explanation-level"
+                    value={explanationLevel}
+                    onChange={(e) => setExplanationLevel(e.target.value)}
+                  >
+                    <option>Semplice</option>
+                    <option>Normale</option>
+                    <option>Approfondito</option>
+                  </select>
+                </div>
+              )}
               {pkg.error && !missingPackage ? (
                 <div className="study-empty">
                   <Sparkles size={26} />
@@ -675,13 +743,22 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
                   topic={topic}
                   quizzes={quizzes}
                   cards={cards}
-                  level={prefs.data?.explanationLevel ?? 'Normale'}
+                  level={explanationLevel}
                   go={go}
                   examId={doc.examId}
                 />
               )}
             </div>
             <div className="assistant-footer">
+              <button
+                className="study-complete mb-3"
+                disabled={saving || (page >= doc.pages && !isStudyable)}
+                onClick={() => (isStudyable ? void complete() : go(page + 1))}
+              >
+                <Check size={16} />
+                {saving ? 'Salvataggio…' : isStudyable ? 'Ho capito, continua' : 'Passa alla prossima pagina'}
+                <ArrowRight size={16} />
+              </button>
               <span className="study-eyebrow">Metti in pratica</span>
               <div className="flex flex-wrap gap-2">
                 <Link className="study-action" href={`/quiz?exam=${doc.examId}`}>
@@ -749,7 +826,17 @@ function AssistantContent({
   if (tab === 'Spiegazione') {
     const key = level === 'Semplice' ? 'simple' : level === 'Approfondito' ? 'deep' : 'normal'
     return (
-      <div>
+      <div className="explanation-article">
+        <h3 className="explanation-title">{topic.name}</h3>
+        {topic.studyable && topic.explanations[key].trim().split(/\s+/).length < 100 && (
+          <div className="explanation-quality-note">
+            <p>
+              Questa spiegazione importata è breve. Per una lezione completa, rigenera il file .study con il
+              nuovo prompt e aggiorna questa dispensa.
+            </p>
+            <Link href="/studio">Migliora i contenuti →</Link>
+          </div>
+        )}
         <MarkdownContent>{topic.explanations[key]}</MarkdownContent>
         <SlideRefs refs={refs} go={go} />
       </div>
