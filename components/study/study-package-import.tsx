@@ -105,13 +105,16 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
     <section className="rounded-2xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">Importa Study Package</h2>
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            02 · Porta qui il risultato
+          </p>
+          <h3 className="mt-2 text-lg font-semibold">Attiva il tuo assistente di studio</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Carica un file .study o .json. Il contenuto didattico resta separato dai tuoi dati personali.
+            Carica il file .study o .json ricevuto dalla tua AI e collegalo alle dispense corrette.
           </p>
         </div>
         <Button variant="contained" onClick={() => input.current?.click()} disabled={busy}>
-          Scegli file
+          Importa file .study
         </Button>
       </div>
       <input

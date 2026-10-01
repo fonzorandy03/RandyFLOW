@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://randyflow.local/schemas/study-package-v1.schema.json",
+  "title": "RandyFLOW Study Package v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "packageId",
+    "revision",
+    "generatedAt",
+    "language",
+    "exam",
+    "materials",
+    "topics",
+    "quizzes",
+    "flashcards",
+    "examQuestions"
+  ],
+  "properties": {
+    "format": {
+      "const": "randyflow-study-package"
+    },
+    "version": {
+      "const": "1.0"
+    },
+    "packageId": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2
+    },
+    "exam": {
+      "$ref": "#/$defs/exam"
+    },
+    "materials": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/material"
+      }
+    },
+    "topics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/topic"
+      }
+    },
+    "quizzes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/quiz"
+      }
+    },
+    "flashcards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/flashcard"
+      }
+    },
+    "examQuestions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/examQuestion"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "slideRefs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "exam": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "description": {
+          "type": "string"
+        },
+        "examDate": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "type", "pageCount"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "type": {
+          "enum": ["pdf", "slides", "notes"]
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "to": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "topic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "materialId",
+        "name",
+        "slideRange",
+        "difficulty",
+        "importance",
+        "estimatedMinutes",
+        "explanations",
+        "summary",
+        "keyConcepts",
+        "examples",
+        "quizIds",
+        "flashcardIds",
+        "examQuestionIds"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "materialId": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "pageType": {
+          "enum": ["content", "cover", "index", "separator", "reference", "empty"]
+        },
+        "slideRange": {
+          "$ref": "#/$defs/range"
+        },
+        "difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "importance": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "explanations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["simple", "normal", "deep"],
+          "properties": {
+            "simple": {
+              "$ref": "#/$defs/nonEmpty"
+            },
+            "normal": {
+              "$ref": "#/$defs/nonEmpty"
+            },
+            "deep": {
+              "$ref": "#/$defs/nonEmpty"
+            }
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "keyConcepts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "quizIds": {
+          "$ref": "#/$defs/ids"
+        },
+        "flashcardIds": {
+          "$ref": "#/$defs/ids"
+        },
+        "examQuestionIds": {
+          "$ref": "#/$defs/ids"
+        },
+        "studyable": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["studyable"],
+            "properties": {
+              "studyable": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "difficulty": {
+                "const": 1
+              },
+              "importance": {
+                "const": 1
+              },
+              "estimatedMinutes": {
+                "const": 0
+              },
+              "quizIds": {
+                "maxItems": 0
+              },
+              "flashcardIds": {
+                "maxItems": 0
+              },
+              "examQuestionIds": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "quiz": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "topicId", "type", "prompt", "correctAnswer", "explanation", "slideRefs"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "topicId": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "enum": ["multiple", "open"]
+        },
+        "prompt": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "correctAnswer": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "$ref": "#/$defs/nonEmpty"
+            }
+          ]
+        },
+        "acceptedKeywords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "explanation": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "slideRefs": {
+          "$ref": "#/$defs/slideRefs"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "multiple"
+              }
+            }
+          },
+          "then": {
+            "required": ["options"],
+            "properties": {
+              "correctAnswer": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "open"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "correctAnswer": {
+                "$ref": "#/$defs/nonEmpty"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "flashcard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "topicId", "front", "back", "slideRefs"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "topicId": {
+          "$ref": "#/$defs/id"
+        },
+        "front": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "back": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "slideRefs": {
+          "$ref": "#/$defs/slideRefs"
+        }
+      }
+    },
+    "examQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "topicId", "prompt", "modelAnswer", "evaluationCriteria", "slideRefs"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "topicId": {
+          "$ref": "#/$defs/id"
+        },
+        "prompt": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "modelAnswer": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "evaluationCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "slideRefs": {
+          "$ref": "#/$defs/slideRefs"
+        }
+      }
+    }
+  }
+}

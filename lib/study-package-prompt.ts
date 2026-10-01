@@ -1,5 +1,6 @@
 ﻿export const STUDY_PACKAGE_PROMPT = `Analizza integralmente il PDF allegato, pagina per pagina, e crea un RandyFLOW Study Package v1.0.
 
+Usa i file allegati STUDY_PACKAGE_SPEC.md e study-package-v1.schema.json come specifica e schema di riferimento. Il risultato deve rispettare entrambi.
 Restituisci esclusivamente un singolo oggetto JSON valido, senza blocchi Markdown, commenti o testo introduttivo. Il file sarà salvato con estensione .study.
 
 SE ALLEGO PIU FILE
