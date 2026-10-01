@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight, BarChart3, BookOpenCheck, CalendarRange, CheckCircle2, FileUp, Layers3, Sparkles } from 'lucide-react'
+import logoImage from '@/logo/Logo Senza Sfondo.png'
 
 const features = [
   { icon: CalendarRange, title: 'Un piano che resta realistico', text: 'Distribuisce gli argomenti in base a difficoltà, importanza, tempo disponibile e data dell’esame.' },
@@ -12,7 +14,7 @@ export default function LandingPage() {
     <div className="relative isolate">
       <div className="absolute inset-x-0 top-0 -z-10 h-[760px] bg-[radial-gradient(circle_at_15%_0%,rgba(76,91,220,.22),transparent_38%),radial-gradient(circle_at_85%_25%,rgba(18,151,111,.13),transparent_32%)]" />
       <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 md:px-8">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight"><span className="grid size-9 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">R</span>RandyFLOW</Link>
+        <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight"><Image src={logoImage} alt="" width={36} height={36} className="size-9 rounded-xl object-contain" />RandyFLOW</Link>
         <div className="flex items-center gap-2"><Link href="/accedi" className="rounded-xl px-4 py-2 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/5">Accedi</Link><Link href="/registrati" className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20">Inizia gratis</Link></div>
       </nav>
       <section className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 md:px-8 md:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:pb-32">

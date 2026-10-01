@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { ApiError } from '@/lib/api/http'
+import logoImage from '@/logo/Logo Senza Sfondo.png'
 
 export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const registerMode = mode === 'register'
@@ -39,7 +41,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(88,101,242,.16),transparent_35%),radial-gradient(circle_at_90%_80%,rgba(18,151,111,.12),transparent_32%)]" />
       <div className="relative w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="grid size-9 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">R</span>
+          <Image src={logoImage} alt="" width={36} height={36} className="size-9 rounded-xl object-contain" />
           RandyFLOW
         </Link>
         <section className="rounded-3xl border border-black/5 bg-white/90 p-7 shadow-[0_24px_80px_rgba(30,36,70,.12)] backdrop-blur dark:border-white/10 dark:bg-card/90 md:p-9">

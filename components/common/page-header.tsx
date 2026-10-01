@@ -1,3 +1,5 @@
+import Image from 'next/image'
+import logoImage from '@/logo/Logo Senza Sfondo.png'
 import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
@@ -26,17 +28,7 @@ export function PageHeader({ eyebrow, title, description, actions, className }: 
 export function Logo({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
-        <svg viewBox="0 0 20 20" className="size-4" fill="none" aria-hidden>
-          <path
-            d="M3 13.5c2.5 0 3.5-7 7-7s4.5 7 7 7"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <circle cx="17" cy="13.5" r="1.6" fill="var(--primary)" />
-        </svg>
-      </span>
+      <Image src={logoImage} alt="" width={28} height={28} className="size-7 shrink-0 rounded-lg object-contain" />
       {!collapsed && (
         <span className="text-[15px] font-semibold tracking-tight">
           Randy<span className="text-primary">FLOW</span>
