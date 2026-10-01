@@ -35,6 +35,7 @@ public class PdfPageClassifier {
     long indexRows = lines.stream().filter(s -> s.matches(".*(?:\\.{2,}|\\s{2,})\\s*\\d+\\s*$") || s.matches("\\d+(?:\\.\\d+)*[.)]?\\s+.+\\s+\\d+$")).count();
     if (indexHeading && (indexRows >= 2 || (!learning && normalized.length() < 1800))) return "index";
     int words = normalized.split("\\s+").length;
+    if (page == 1 && words < 250 && Pattern.compile("\\b(come usare questa dispensa|come utilizzare (?:questa|la) dispensa|guida alla lettura)\\b").matcher(normalized).find()) return "cover";
     if (page == 1 && words < 100 && !learning && Pattern.compile("\\b(universita|dispensa|dispense|appunti|corso di|a\\.a\\.|anno accademico)\\b").matcher(normalized).find()) return "cover";
     if (words < 18 && !learning && Pattern.compile("(?m)^(capitolo|parte|sezione)\\s+[0-9ivx]+\\b").matcher(opening).find()) return "separator";
     return "content";
