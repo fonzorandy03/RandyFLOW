@@ -32,7 +32,9 @@ public class PdfPageClassifier {
     String opening = String.join("\n", lines.subList(0, Math.min(6, lines.size())));
     boolean learning = Pattern.compile("\\b(definizione|esempio|da ricordare|domanda|esercizio|teorema|dimostrazione)\\b").matcher(normalized).find();
     boolean indexHeading = Pattern.compile("(?m)^(indice(?: generale)?|sommario|table of contents|contents)\\s*$").matcher(opening).find();
+    long dottedRows = lines.stream().filter(s -> s.matches(".*(?:\\.\\s*){3,}\\d+\\s*$")).count();
     long indexRows = lines.stream().filter(s -> s.matches(".*(?:\\.{2,}|\\s{2,})\\s*\\d+\\s*$") || s.matches("\\d+(?:\\.\\d+)*[.)]?\\s+.+\\s+\\d+$")).count();
+    if (dottedRows >= 4 && dottedRows * 2 >= lines.size()) return "index";
     if (indexHeading && (indexRows >= 2 || (!learning && normalized.length() < 1800))) return "index";
     int words = normalized.split("\\s+").length;
     if (page == 1 && words < 250 && Pattern.compile("\\b(come usare questa dispensa|come utilizzare (?:questa|la) dispensa|guida alla lettura)\\b").matcher(normalized).find()) return "cover";
