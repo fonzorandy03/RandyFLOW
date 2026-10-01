@@ -130,9 +130,16 @@ export function MonthCalendar({
                       )}`}
                     >
                       <span className="truncate font-semibold">
-                        {item.slideFrom != null
-                          ? materialLabel(item, documents)
-                          : SESSION_STATUS[item.status].label}
+                        {item.slideFrom != null ? (
+                          <>
+                            <span className="sm:hidden">
+                              {materialLabel(item, documents).replace('Dispensa ', 'D')}
+                            </span>
+                            <span className="hidden sm:inline">{materialLabel(item, documents)}</span>
+                          </>
+                        ) : (
+                          SESSION_STATUS[item.status].label
+                        )}
                       </span>
                       {item.slideFrom != null && (
                         <span className="font-medium tabular-nums">
