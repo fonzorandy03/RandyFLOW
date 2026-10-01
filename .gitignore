@@ -16,3 +16,9 @@ node_modules
 .next/
 *.tsbuildinfo
 .DS_Store
+
+# Generated from the installed PDF.js version before dev/build
+public/pdf.worker.min.mjs
+public/pdf-cmaps/
+public/pdf-fonts/
+public/pdf-wasm/

@@ -1,34 +1,40 @@
 'use client'
 import Button from '@mui/material/Button'
-import LinearProgress from '@mui/material/LinearProgress'
-import TextField from '@mui/material/TextField'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Expand,
+  List,
+  Search,
+  Sparkles,
+  Target,
+  X,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react'
 import useSWR, { mutate } from 'swr'
 import { settingsApi, studyApi, studyPackageApi } from '@/lib/api/services'
+import { ApiError, USE_MOCKS } from '@/lib/api/http'
 import { refreshPlanData, useDocument, useSessions } from '@/lib/hooks'
 import { topicForSlide } from '@/lib/study-package'
 import type { StudyDocument } from '@/lib/types'
 import { ErrorState, LoadingState } from '../common/states'
 import { MarkdownContent } from '../common/markdown-content'
+import { useToast } from '../common/toast'
 import { useShell } from '../layout/shell-context'
 import { SlideContent } from './slide-content'
+import { PdfReader } from './pdf-reader'
+import { SessionTimer } from './session-timer'
 
 type AssistantTab = 'Spiegazione' | 'Riassunto' | 'Concetti' | 'Esempi' | 'Quiz' | 'Flashcard'
 const assistantTabs: AssistantTab[] = ['Spiegazione', 'Riassunto', 'Concetti', 'Esempi', 'Quiz', 'Flashcard']
-const pageTypeLabels = {
-  content: 'Contenuto',
-  cover: 'Copertina',
-  index: 'Indice',
-  separator: 'Separatore di sezione',
-  reference: 'Riferimenti',
-  empty: 'Pagina vuota',
-  'section-divider': 'Separatore di sezione',
-  blank: 'Pagina vuota',
-  references: 'Riferimenti',
-  exercise: 'Esercizio',
-} as const
 
 export function Workspace({ id }: { id: string }) {
   const document = useDocument(id)
@@ -51,20 +57,26 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const params = useSearchParams()
   const clamp = (n: number) => Math.max(1, Math.min(doc.pages, Number.isFinite(n) ? Math.floor(n) : 1))
   const [page, setPage] = useState(() => clamp(Number(params.get('page') || doc.lastPage)))
+  const [pageInput, setPageInput] = useState(String(page))
   const [mobileTab, setMobileTab] = useState<'document' | 'assistant'>('document')
   const [assistantTab, setAssistantTab] = useState<AssistantTab>('Spiegazione')
+  const [assistantOpen, setAssistantOpen] = useState(true)
   const [zoom, setZoom] = useState(100)
-  const [thumbs, setThumbs] = useState(false)
+  const [outline, setOutline] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
   const [error, setError] = useState('')
-  const [seconds, setSeconds] = useState(0)
-  const [timer, setTimer] = useState(false)
   const [saving, setSaving] = useState(false)
   const [completed, setCompleted] = useState<number[]>([])
   const [pdfUrl, setPdfUrl] = useState('')
+  const [pdfError, setPdfError] = useState(false)
+  const [pdfAttempt, setPdfAttempt] = useState(0)
   const root = useRef<HTMLDivElement>(null)
   const positionQueue = useRef(Promise.resolve())
+  const savingRef = useRef(false)
   const { focus, setFocus } = useShell()
+  const toast = useToast()
   const sessions = useSessions(doc.examId)
   const session = sessions.data?.find((item) => item.id === params.get('session'))
   const from = clamp(Number(params.get('from') || 1))
@@ -72,32 +84,49 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const hasGoal = params.has('from') && params.has('to')
   const count = session?.slidesDone ?? completed.filter((value) => value >= from && value <= to).length
   const total = to - from + 1
-  const slide = useSWR(['slide', doc.id, page], () => studyApi.slide(doc.id, page))
-  const pkg = useSWR(['study-package-material', doc.id], () => studyPackageApi.forMaterial(doc.id))
+  const done = hasGoal ? Math.min(count, total) : doc.pagesRead
+  const goal = hasGoal ? total : doc.studyablePages
+  const progress = Math.min(100, (100 * done) / Math.max(1, goal))
+  const slide = useSWR(USE_MOCKS ? ['slide', doc.id, page] : null, () => studyApi.slide(doc.id, page))
+  const pkg = useSWR(['study-package-material', doc.id], () => studyPackageApi.forMaterial(doc.id), {
+    shouldRetryOnError: false,
+  })
   const prefs = useSWR('settings', settingsApi.get)
-  const results = useSWR(search.trim() ? ['search-document', doc.id, search] : null, () =>
-    studyApi.search(doc.id, search),
+  const results = useSWR(query ? ['search-document', doc.id, query] : null, () =>
+    studyApi.search(doc.id, query),
   )
-  const thumbnails = useSWR(thumbs ? ['thumbnails', doc.id] : null, () => studyApi.thumbnails(doc.id))
   const topic = pkg.data ? topicForSlide(pkg.data, doc.id, page) : undefined
   const isStudyable = !topic || ((topic.pageType ?? 'content') === 'content' && (topic.studyable ?? true))
   const quizzes = pkg.data?.quizzes.filter((item) => item.topicId === topic?.id) ?? []
   const cards = pkg.data?.flashcards.filter((item) => item.topicId === topic?.id) ?? []
+  const chapter = doc.chapters.find((item) => page >= item.from && page <= item.to)
+  const missingPackage = pkg.error && (pkg.error instanceof ApiError ? pkg.error.status === 404 : USE_MOCKS)
 
   useEffect(() => () => setFocus(false), [setFocus])
   useEffect(() => {
+    const timeout = window.setTimeout(() => setQuery(search.trim()), 300)
+    return () => clearTimeout(timeout)
+  }, [search])
+  useEffect(() => {
+    if (USE_MOCKS) return
     let active = true
     let objectUrl = ''
-    void studyApi.pdf(doc.id).then((blob) => {
-      if (!active) return
-      objectUrl = URL.createObjectURL(blob)
-      setPdfUrl(objectUrl)
-    }).catch(() => setPdfUrl(''))
+    setPdfError(false)
+    void studyApi
+      .pdf(doc.id)
+      .then((blob) => {
+        if (!active) return
+        objectUrl = URL.createObjectURL(blob)
+        setPdfUrl(objectUrl)
+      })
+      .catch(() => {
+        if (active) setPdfError(true)
+      })
     return () => {
       active = false
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [doc.id])
+  }, [doc.id, pdfAttempt])
   useEffect(() => {
     positionQueue.current = positionQueue.current
       .then(async () => {
@@ -108,284 +137,520 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
       .catch(() => setError('Posizione non salvata. Riprova cambiando pagina.'))
   }, [doc.id, page])
   useEffect(() => {
-    if (!timer) return
-    const interval = window.setInterval(() => setSeconds((value) => value + 1), 1000)
-    return () => clearInterval(interval)
-  }, [timer])
+    const handle = (event: KeyboardEvent) => {
+      const element = event.target as HTMLElement
+      if (
+        element.closest('input, textarea, select, button, a, [contenteditable="true"], [role="dialog"]') ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      )
+        return
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        event.preventDefault()
+        const next = Math.max(1, Math.min(doc.pages, page + (event.key === 'ArrowRight' ? 1 : -1)))
+        setPage(next)
+        setPageInput(String(next))
+      }
+    }
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
+  }, [page, doc.pages])
   const go = (value: number) => {
-    setPage(clamp(value))
+    const next = clamp(value)
+    setPage(next)
+    setPageInput(String(next))
     setMobileTab('document')
   }
+  const commitPage = () => {
+    if (pageInput.trim()) go(Number(pageInput))
+    else setPageInput(String(page))
+  }
   const complete = async () => {
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     setError('')
     try {
       await studyApi.completePage(doc.id, page, session?.id)
       setCompleted((value) => (value.includes(page) ? value : [...value, page]))
       await refreshPlanData()
+      toast(
+        page === (hasGoal ? to : doc.pages)
+          ? 'Hai raggiunto la fine. Ottimo lavoro!'
+          : 'Pagina completata. Continua così!',
+      )
       if (page < (hasGoal ? to : doc.pages)) go(page + 1)
     } catch {
       setError('Progresso non salvato. Riprova.')
     } finally {
-      setSaving(false)
-    }
-  }
-  const saveTime = async () => {
-    setSaving(true)
-    try {
-      await studyApi.log({
-        examId: doc.examId,
-        documentId: doc.id,
-        fromPage: from,
-        toPage: page,
-        minutes: Math.max(1, Math.round(seconds / 60)),
-        label: slide.data?.chapter ?? doc.name,
-      })
-      setTimer(false)
-      setSeconds(0)
-      await mutate('stats')
-      await mutate('logs')
-      await refreshPlanData()
-    } catch {
-      setError('Sessione non salvata. Riprova.')
-    } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
   return (
-    <div ref={root} className={`flex min-h-full flex-col bg-background ${focus ? '' : 'pb-20 md:pb-0'}`}>
-      <header className="flex flex-wrap items-center gap-2 border-b p-3">
-        <Link href="/studio" className="mr-2 text-sm text-primary">
-          ← Studio
-        </Link>
-        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{doc.name}</h1>
-        <Button size="small" onClick={() => setFocus(!focus)}>
-          {focus ? 'Esci da Focus' : 'Focus Mode'}
-        </Button>
-        <Button
-          size="small"
-          onClick={async () => {
-            try {
-              if (window.document.fullscreenElement) await window.document.exitFullscreen()
-              else await root.current?.requestFullscreen()
-            } catch {
-              setError('Fullscreen non disponibile in questo browser.')
-            }
-          }}
-        >
-          Fullscreen
-        </Button>
-      </header>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-card p-3">
-        <div className="min-w-48 flex-1">
-          <p className="mb-2 text-sm font-medium">
-            {hasGoal
-              ? `Obiettivo: slide ${from}–${to} · ${Math.min(count, total)} / ${total} slide`
-              : `Documento · ${doc.pagesRead} / ${doc.studyablePages} pagine didattiche completate`}
-          </p>
-          <LinearProgress
-            variant="determinate"
-            value={hasGoal ? Math.min(100, (100 * count) / total) : (100 * doc.pagesRead) / Math.max(1, doc.studyablePages)}
-          />
+    <div ref={root} className={`study-workspace ${focus ? 'is-focus' : ''}`}>
+      <header className="study-heading">
+        <div className="min-w-0">
+          <Link
+            href="/studio"
+            className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
+          >
+            <ArrowLeft size={14} />
+            Il tuo spazio di studio
+          </Link>
+          <div className="flex items-center gap-3">
+            <span className="study-document-icon">
+              <BookOpen size={22} />
+            </span>
+            <div className="min-w-0">
+              <p className="study-eyebrow">Una pagina alla volta, verso il tuo obiettivo</p>
+              <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl" title={doc.name}>
+                {doc.name.replace(/\.pdf$/i, '').replace(/_/g, ' ')}
+              </h1>
+            </div>
+          </div>
         </div>
-        {isStudyable ? (
-          <Button variant="contained" disabled={saving} onClick={complete}>Segna pagina letta e continua</Button>
-        ) : (
-          <Button variant="outlined" onClick={() => go(page + 1)} disabled={page === doc.pages}>Pagina successiva</Button>
-        )}
-        <Button size="small" onClick={() => setTimer(!timer)}>
-          {timer ? 'Pausa' : 'Timer'} {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
-        </Button>
-        {seconds > 0 && (
-          <Button disabled={saving} onClick={saveTime}>
-            Salva sessione
-          </Button>
-        )}
-        {prefs.data?.autoBreak && seconds >= (prefs.data.sessionMinutes ?? 25) * 60 && (
-          <span className="text-xs text-primary">
-            È il momento di una pausa di {prefs.data.breakMinutes ?? 5} min.
-          </span>
-        )}
+        <div className="flex shrink-0 gap-2">
+          <button className={`study-action ${focus ? 'active' : ''}`} onClick={() => setFocus(!focus)}>
+            <Target size={16} />
+            {focus ? 'Esci da Focus' : 'Concentrati'}
+          </button>
+          <button
+            className="study-icon"
+            aria-label="Schermo intero"
+            title="Schermo intero"
+            onClick={async () => {
+              try {
+                if (window.document.fullscreenElement) await window.document.exitFullscreen()
+                else await root.current?.requestFullscreen()
+              } catch {
+                setError('Schermo intero non disponibile in questo browser.')
+              }
+            }}
+          >
+            <Expand size={18} />
+          </button>
+        </div>
+      </header>
+      <div className="study-session-bar">
+        <div className="study-progress">
+          <div className="mb-2 flex items-center justify-between gap-4">
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <span className="size-2 rounded-full bg-success" />
+              {hasGoal ? `Obiettivo di oggi · pagine ${from}–${to}` : 'Il tuo percorso'}
+            </span>
+            <span className="tabular text-xs text-muted-foreground">
+              {done} / {goal} completate
+            </span>
+          </div>
+          <div
+            className="study-progress-track"
+            role="progressbar"
+            aria-label="Pagine completate"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress)}
+          >
+            <div style={{ width: `${progress}%` }} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {progress >= 100
+              ? 'Obiettivo raggiunto. Prenditi un momento per ripassare.'
+              : 'Ogni pagina è un piccolo passo avanti.'}
+          </p>
+        </div>
+        <SessionTimer
+          key={doc.id}
+          documentId={doc.id}
+          examId={doc.examId}
+          page={page}
+          label={chapter?.title ?? doc.name}
+          targetMinutes={prefs.data?.sessionMinutes}
+          breakMinutes={prefs.data?.breakMinutes}
+          autoBreak={prefs.data?.autoBreak}
+        />
       </div>
       {error && (
-        <p role="alert" className="p-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+        >
           {error}
-        </p>
-      )}
-      <div role="tablist" className="flex border-b lg:hidden">
-        {(
-          [
-            ['document', 'Documento'],
-            ['assistant', 'Assistente'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={mobileTab === id}
-            onClick={() => setMobileTab(id)}
-            className={`flex-1 p-3 ${mobileTab === id ? 'border-b-2 border-primary text-primary' : ''}`}
-          >
-            {label}
+          <button className="study-icon" aria-label="Chiudi messaggio" onClick={() => setError('')}>
+            <X size={16} />
           </button>
-        ))}
+        </div>
+      )}
+      <div role="tablist" aria-label="Pannelli di studio" className="study-mobile-tabs">
+        <button role="tab" aria-selected={mobileTab === 'document'} onClick={() => setMobileTab('document')}>
+          Documento
+        </button>
+        <button
+          role="tab"
+          aria-selected={mobileTab === 'assistant'}
+          onClick={() => {
+            setAssistantOpen(true)
+            setMobileTab('assistant')
+          }}
+        >
+          Assistente
+        </button>
       </div>
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
+      <div className={`study-panels ${assistantOpen ? '' : 'reader-only'}`}>
         <section
           aria-label="Documento"
-          className={`${mobileTab === 'document' ? 'flex' : 'hidden'} min-w-0 flex-col lg:flex lg:border-r`}
+          className={`study-reader ${mobileTab === 'document' ? '' : 'mobile-hidden'}`}
         >
-          <div className="flex flex-wrap items-center gap-2 border-b p-2">
-            <Button size="small" disabled={page === 1} onClick={() => go(page - 1)}>
-              Precedente
-            </Button>
-            <label className="text-xs">
-              Pagina{' '}
-              <input
-                aria-label="Pagina corrente"
-                type="number"
-                min={1}
-                max={doc.pages}
-                value={page}
-                onChange={(event) => go(Number(event.target.value))}
-                className="w-16 rounded border bg-card p-2"
-              />{' '}
-              / {doc.pages}
-            </label>
-            <Button size="small" disabled={page === doc.pages} onClick={() => go(page + 1)}>
-              Successiva
-            </Button>
-            <label className="text-xs">
-              Zoom{' '}
+          <div className="reader-toolbar">
+            <div className="flex items-center gap-1">
+              <button
+                className={`study-icon ${outline ? 'active' : ''}`}
+                aria-label="Mostra indice delle pagine"
+                aria-expanded={outline}
+                onClick={() => setOutline(!outline)}
+                title="Indice e pagine"
+              >
+                <List size={18} />
+              </button>
+              <span className="toolbar-divider" />
+              <button
+                className="study-icon"
+                aria-label="Pagina precedente"
+                disabled={page === 1}
+                onClick={() => go(page - 1)}
+              >
+                <ChevronLeft size={19} />
+              </button>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  commitPage()
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  className="page-input tabular"
+                  aria-label="Pagina corrente"
+                  type="number"
+                  min={1}
+                  max={doc.pages}
+                  value={pageInput}
+                  onChange={(event) => setPageInput(event.target.value)}
+                  onBlur={commitPage}
+                />
+                <span className="whitespace-nowrap text-xs text-muted-foreground">di {doc.pages}</span>
+              </form>
+              <button
+                className="study-icon"
+                aria-label="Pagina successiva"
+                disabled={page === doc.pages}
+                onClick={() => go(page + 1)}
+              >
+                <ChevronRight size={19} />
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
               <select
+                className="zoom-select"
+                aria-label="Zoom documento"
                 value={zoom}
                 onChange={(event) => setZoom(Number(event.target.value))}
-                className="rounded border bg-card p-2"
               >
                 {[75, 100, 125, 150, 200].map((value) => (
-                  <option key={value}>{value}</option>
+                  <option key={value} value={value}>
+                    {value === 100 ? 'Adatta' : `${value}%`}
+                  </option>
                 ))}
               </select>
-            </label>
-            <Button size="small" onClick={() => setThumbs(!thumbs)}>
-              Miniature
-            </Button>
+              <button
+                className={`study-icon ${searchOpen ? 'active' : ''}`}
+                aria-label="Cerca nel documento"
+                aria-expanded={searchOpen}
+                onClick={() => setSearchOpen(!searchOpen)}
+              >
+                <Search size={17} />
+              </button>
+              <button
+                className="study-icon assistant-toggle"
+                aria-label={assistantOpen ? 'Nascondi assistente' : 'Mostra assistente'}
+                onClick={() => setAssistantOpen(!assistantOpen)}
+                title={assistantOpen ? 'Più spazio al documento' : 'Mostra assistente'}
+              >
+                {assistantOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+              </button>
+            </div>
           </div>
-          <div className="p-3">
-            <TextField
-              fullWidth
-              size="small"
-              label="Cerca nel documento"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            {search && (
-              <div className="max-h-40 overflow-auto">
-                {results.data?.map((result) => (
+          {searchOpen && (
+            <div className="reader-search">
+              <div className="flex items-center gap-2">
+                <Search size={16} className="text-muted-foreground" />
+                <input
+                  autoFocus
+                  aria-label="Cerca nel documento"
+                  placeholder="Cerca una parola o un concetto…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+                <button
+                  className="study-icon"
+                  aria-label="Chiudi ricerca"
+                  onClick={() => {
+                    setSearchOpen(false)
+                    setSearch('')
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              {query && (
+                <div className="max-h-44 overflow-auto">
+                  {results.error ? (
+                    <p role="alert" className="py-3 text-sm text-destructive">
+                      Ricerca non disponibile. Riprova.
+                    </p>
+                  ) : !results.data || search.trim() !== query ? (
+                    <p className="py-3 text-xs text-muted-foreground">Ricerca in corso…</p>
+                  ) : results.data.length ? (
+                    results.data.map((result) => (
+                      <button
+                        key={result.page}
+                        className="search-result"
+                        onClick={() => {
+                          go(result.page)
+                          setSearchOpen(false)
+                        }}
+                      >
+                        <span>Pagina {result.page}</span>
+                        {result.title}
+                        <ArrowRight size={14} />
+                      </button>
+                    ))
+                  ) : (
+                    <p className="py-3 text-sm text-muted-foreground">Nessun risultato.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="reader-body">
+            {outline && (
+              <nav className="reader-outline scrollbar-thin" aria-label="Indice documento">
+                <p className="study-eyebrow mb-3">Vai alla pagina</p>
+                {doc.chapters.map((item) => (
                   <button
-                    key={result.page}
-                    className="block w-full p-2 text-left text-sm hover:bg-muted"
-                    onClick={() => go(result.page)}
+                    key={`${item.from}:${item.title}`}
+                    className={`outline-chapter ${chapter === item ? 'active' : ''}`}
+                    onClick={() => go(item.from)}
                   >
-                    Slide {result.page} · {result.title}
+                    <span>{item.title}</span>
+                    <small>
+                      {item.from}?{item.to}
+                    </small>
                   </button>
                 ))}
-                {results.data && !results.data.length && <p className="p-2 text-sm">Nessun risultato</p>}
+                <div className="page-grid">
+                  {Array.from({ length: doc.pages }, (_, i) => i + 1).map((number) => (
+                    <button
+                      key={number}
+                      aria-label={`Vai a pagina ${number}`}
+                      aria-current={page === number ? 'page' : undefined}
+                      className={page === number ? 'active' : ''}
+                      onClick={() => go(number)}
+                    >
+                      {number}
+                      {completed.includes(number) && <Check size={10} />}
+                    </button>
+                  ))}
+                </div>
+              </nav>
+            )}
+            {pdfUrl ? (
+              <PdfReader key={pdfUrl} url={pdfUrl} page={page} zoom={zoom} name={doc.name} />
+            ) : USE_MOCKS ? (
+              <div className="pdf-stage scrollbar-thin">
+                <article className="demo-sheet" style={{ width: `${zoom}%` }}>
+                  {slide.error ? (
+                    <ErrorState onRetry={() => void slide.mutate()} />
+                  ) : slide.data ? (
+                    <SlideContent slide={slide.data} />
+                  ) : (
+                    <LoadingState />
+                  )}
+                </article>
+              </div>
+            ) : pdfError ? (
+              <div className="study-empty">
+                <BookOpen size={30} />
+                <h3>Il documento non è disponibile</h3>
+                <p>Controlla la connessione e riprova a caricarlo.</p>
+                <button className="study-action" onClick={() => setPdfAttempt((value) => value + 1)}>
+                  Riprova
+                </button>
+              </div>
+            ) : (
+              <div className="pdf-stage">
+                <LoadingState />
               </div>
             )}
           </div>
-          {thumbs && (
-            <div className="flex max-h-40 gap-2 overflow-auto px-3 pb-3">
-              {Array.from({ length: doc.pages }, (_, index) => index + 1).map((number) => (
-                <button
-                  key={number}
-                  onClick={() => go(number)}
-                  className={`w-24 shrink-0 rounded-lg border p-2 text-left text-xs ${page === number ? 'border-primary bg-primary/10' : 'bg-card'}`}
-                >
-                  <b>{number}</b>
-                  <span className="mt-2 block">
-                    {thumbnails.data?.[number - 1]?.title ??
-                      doc.chapters.find((chapter) => number >= chapter.from && number <= chapter.to)?.title}
-                  </span>
-                </button>
-              ))}
+          <footer className="reader-footer">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium">{chapter?.title ?? `Pagina ${page}`}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {isStudyable
+                  ? 'Leggi con calma. Poi segna la pagina come completata.'
+                  : 'Pagina di servizio · non inclusa nel tuo obiettivo'}
+              </p>
             </div>
-          )}
-          <div className="flex-1 overflow-auto bg-muted/50 p-3 md:p-6">
-            {pdfUrl ? (
-              <iframe
-                key={`${page}:${zoom}`}
-                src={`${pdfUrl}#page=${page}&zoom=${zoom}`}
-                title={`${doc.name}, pagina ${page}`}
-                className="mx-auto h-[72vh] min-h-[560px] w-full rounded-xl border bg-white shadow-sm"
-              />
-            ) : (
-              <article className="mx-auto min-h-80 rounded-xl border bg-card p-6 shadow-sm md:p-9" style={{ zoom: zoom / 100 }}>
-                {slide.error ? <ErrorState onRetry={() => void slide.mutate()} /> : slide.data ? <SlideContent slide={slide.data} /> : <LoadingState />}
-              </article>
-            )}
-          </div>
+            <button
+              className="study-complete"
+              disabled={saving || (!isStudyable && page === doc.pages)}
+              onClick={() => (isStudyable ? void complete() : go(page + 1))}
+            >
+              {saving ? (
+                'Salvataggio…'
+              ) : isStudyable ? (
+                <>
+                  <Check size={17} />
+                  Letta, continua
+                  <ArrowRight size={16} />
+                </>
+              ) : (
+                <>
+                  Continua
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </footer>
         </section>
-        <section
-          aria-label="Assistente di Studio"
-          className={`${mobileTab === 'assistant' ? 'flex' : 'hidden'} min-w-0 flex-col bg-card lg:flex`}
-        >
-          <div className="border-b p-4">
-            <h2 className="font-semibold">Assistente di Studio</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Slide {page}
-              {topic ? ` · ${topic.name}` : ''}
-            </p>
+        {assistantOpen && (
+          <section
+            aria-label="Assistente di studio"
+            className={`study-assistant ${mobileTab === 'assistant' ? '' : 'mobile-hidden'}`}
+          >
+            <div className="assistant-heading">
+              <div className="flex items-center gap-3">
+                <span className="assistant-symbol">
+                  <Sparkles size={20} />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold">Il tuo compagno di studio</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">Comprendi, collega, ricorda.</p>
+                </div>
+              </div>
+              <div className="assistant-context">
+                <span className="tabular">Pagina {page}</span>
+                <p className="truncate">{topic?.name ?? chapter?.title ?? 'Il tuo documento'}</p>
+              </div>
+            </div>
             {topic && (
-              <span className="mt-2 inline-flex rounded-full border bg-muted px-2 py-1 text-xs font-medium">
-                {pageTypeLabels[topic.pageType ?? 'content']}{!isStudyable && ' · non inclusa nel piano di studio'}
-              </span>
+              <div role="tablist" aria-label="Contenuti di studio" className="assistant-tabs">
+                {assistantTabs.map((item) => (
+                  <button
+                    key={item}
+                    role="tab"
+                    aria-selected={assistantTab === item}
+                    onClick={() => setAssistantTab(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
             )}
-          </div>
-          <div role="tablist" className="flex flex-wrap gap-1 border-b p-2">
-            {assistantTabs.map((item) => (
-              <button
-                key={item}
-                role="tab"
-                aria-selected={assistantTab === item}
-                onClick={() => setAssistantTab(item)}
-                className={`rounded-lg px-3 py-2 text-xs ${assistantTab === item ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-auto p-5">
-            {pkg.error ? (
-              <ErrorState message="Study Package non disponibile." onRetry={() => void pkg.mutate()} />
-            ) : !pkg.data ? (
-              <LoadingState />
-            ) : !topic ? (
-              <p className="text-sm text-muted-foreground">Nessun contenuto associato a questa slide.</p>
-            ) : (
-              <AssistantContent
-                tab={assistantTab}
-                topic={topic}
-                quizzes={quizzes}
-                cards={cards}
-                level={prefs.data?.explanationLevel ?? 'Normale'}
-                go={go}
-                examId={doc.examId}
-              />
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 border-t p-3">
-            <Button component={Link} href={`/quiz?exam=${doc.examId}`}>
-              Apri quiz
-            </Button>
-            <Button component={Link} href={`/flashcard?exam=${doc.examId}`}>
-              Apri flashcard
-            </Button>
-            <Button component={Link} href={`/simulazione?exam=${doc.examId}`}>
-              Simulazione esame
-            </Button>
-          </div>
-        </section>
+            <div className="assistant-content scrollbar-thin">
+              {pkg.error && !missingPackage ? (
+                <div className="study-empty">
+                  <Sparkles size={26} />
+                  <h3>Assistente momentaneamente non disponibile</h3>
+                  <p>Puoi continuare a leggere e riprovare tra poco.</p>
+                  <button className="study-action" onClick={() => void pkg.mutate()}>
+                    Riprova
+                  </button>
+                </div>
+              ) : !pkg.data && !pkg.error ? (
+                <LoadingState />
+              ) : !topic ? (
+                <div className="assistant-welcome">
+                  <p className="study-eyebrow">Fai spazio alla comprensione</p>
+                  <h3>
+                    Non serve fare tutto.
+                    <br />
+                    Inizia da questa pagina.
+                  </h3>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Tre piccoli passi per trasformare la lettura in qualcosa che ricordi.
+                  </p>
+                  <ol className="study-steps">
+                    <li>
+                      <span>01</span>
+                      <div>
+                        <b>Trova l’idea centrale</b>
+                        <p>Qual è il concetto più importante della pagina?</p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>02</span>
+                      <div>
+                        <b>Spiegalo con parole tue</b>
+                        <p>Come lo racconteresti a un compagno?</p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>03</span>
+                      <div>
+                        <b>Metti alla prova il ricordo</b>
+                        <p>Distogli lo sguardo e riassumi ciò che hai letto.</p>
+                      </div>
+                    </li>
+                  </ol>
+                  <div className="assistant-package">
+                    <Sparkles size={18} />
+                    <p>
+                      {pkg.data
+                        ? 'Questa pagina non ha contenuti di ripasso associati.'
+                        : 'Aggiungi un pacchetto di studio per avere spiegazioni, quiz e flashcard legati alle tue pagine.'}
+                    </p>
+                    <Link href="/studio">
+                      {pkg.data ? 'Gestisci materiali' : 'Aggiungi contenuti'}
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <AssistantContent
+                  tab={assistantTab}
+                  topic={topic}
+                  quizzes={quizzes}
+                  cards={cards}
+                  level={prefs.data?.explanationLevel ?? 'Normale'}
+                  go={go}
+                  examId={doc.examId}
+                />
+              )}
+            </div>
+            <div className="assistant-footer">
+              <span className="study-eyebrow">Metti in pratica</span>
+              <div className="flex flex-wrap gap-2">
+                <Link className="study-action" href={`/quiz?exam=${doc.examId}`}>
+                  Quiz
+                  <ArrowRight size={14} />
+                </Link>
+                <Link className="study-action" href={`/flashcard?exam=${doc.examId}`}>
+                  Flashcard
+                  <ArrowRight size={14} />
+                </Link>
+                <Link
+                  className="text-xs text-muted-foreground hover:text-primary"
+                  href={`/simulazione?exam=${doc.examId}`}
+                >
+                  Simula l’esame
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )
@@ -393,13 +658,18 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
 
 function SlideRefs({ refs, go }: { refs: number[]; go: (page: number) => void }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1">
-      {refs.map((ref) => (
-        <Button size="small" key={ref} onClick={() => go(ref)}>
-          Slide {ref}
-        </Button>
-      ))}
-    </div>
+    <details className="mt-5 rounded-xl border p-3 text-xs text-muted-foreground">
+      <summary className="cursor-pointer">
+        Riferimenti · {refs.length === 1 ? `pagina ${refs[0]}` : `pagine ${refs[0]}–${refs.at(-1)}`}
+      </summary>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {refs.map((ref) => (
+          <Button size="small" key={ref} onClick={() => go(ref)}>
+            Pagina {ref}
+          </Button>
+        ))}
+      </div>
+    </details>
   )
 }
 
