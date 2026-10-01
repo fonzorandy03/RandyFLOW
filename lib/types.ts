@@ -29,6 +29,7 @@ export interface Exam {
   minutesStudied: number
   status: ExamStatus
   documentIds: string[]
+  startDate?: ISODate
   reviewDays: number
   unavailableDays: ISODate[]
   availability: Availability
@@ -328,5 +329,6 @@ export interface NewExamInput {
   documents: { name: string; pages: number }[]
   availability: Availability
   unavailableDays: ISODate[]
+  startDate?: ISODate
   reviewDays: number
 }

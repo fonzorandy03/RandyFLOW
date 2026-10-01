@@ -2,7 +2,7 @@
 
 import { TriangleAlert } from 'lucide-react'
 import { useMemo } from 'react'
-import { TODAY, addDays, formatDay, formatDuration, formatWeekdayShort } from '@/lib/date'
+import { formatDay, formatDuration, formatWeekdayShort } from '@/lib/date'
 import { generatePlan } from '@/lib/planner-engine'
 import { cn } from '@/lib/utils'
 import type { ExamDraft } from '../new-exam-wizard'
@@ -19,7 +19,7 @@ export function PlanPreview({ draft }: { draft: ExamDraft }) {
     }))
     return generatePlan({
       examId: 'preview',
-      startDate: addDays(TODAY, 1),
+      startDate: draft.startDate,
       examDate: draft.date,
       startSlide: 1,
       endSlide: pages,

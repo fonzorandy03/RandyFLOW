@@ -7,5 +7,6 @@ import jakarta.persistence.*; import java.time.LocalDate;
  @Column(name="review_days") public int reviewDays=4; @Column(name="availability_json",columnDefinition="TEXT") public String availabilityJson="{}";
  @Column(name="unavailable_days_json",columnDefinition="TEXT") public String unavailableDaysJson="[]"; @Column(name="created_at",nullable=false) public LocalDate createdAt;
  @Column(name="owner_id",nullable=false) public String ownerId;
+ @Column(name="start_date") public LocalDate startDate;
  public ExamEntity() {}
 }

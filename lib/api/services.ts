@@ -87,6 +87,22 @@ export const userApi = {
 }
 
 export const examsApi = {
+  updatePlan: (
+    id: string,
+    settings: { startDate: string; unavailableDays: string[]; reviewDays: number },
+  ): Promise<Exam> => {
+    if (!USE_MOCKS) return http.patch(`/exams/${id}/plan/settings`, settings)
+    return mockResponse(() => {
+      const exam = findExam(id)
+      Object.assign(exam, settings)
+      redistribute(
+        exam,
+        addDays(settings.startDate > TODAY ? settings.startDate : TODAY, -1),
+        documentFor(exam).pagesRead + 1,
+      )
+      return exam
+    })
+  },
   reorderMaterials: (id: string, materialIds: string[]): Promise<StudyDocument[]> => {
     if (!USE_MOCKS) return http.patch(`/exams/${id}/materials/order`, { materialIds })
     return mockResponse(() => {
@@ -142,6 +158,7 @@ export const examsApi = {
         minutesStudied: 0,
         status: 'not-started',
         documentIds: [docId],
+        startDate: input.startDate,
         reviewDays: input.reviewDays,
         unavailableDays: input.unavailableDays,
         availability: input.availability,
@@ -151,7 +168,7 @@ export const examsApi = {
       db.sessions.push(
         ...generatePlan({
           examId: id,
-          startDate: addDays(TODAY, 1),
+          startDate: input.startDate ?? addDays(TODAY, 1),
           examDate: input.date,
           startSlide: 1,
           endSlide: pages,

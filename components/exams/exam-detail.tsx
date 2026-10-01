@@ -9,6 +9,7 @@ import {
   Layers,
   ListChecks,
   SearchX,
+  SlidersHorizontal,
   Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -20,6 +21,8 @@ import { SectionTitle } from '@/components/common/page-header'
 import { ProgressRing } from '@/components/common/progress-ring'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/common/states'
 import { ExamStatusLabel, SessionStatusBadge } from '@/components/common/status-badge'
+import { PlanSettingsDialog } from '@/components/plan/plan-settings-dialog'
+import { useCurrentDate } from '@/lib/use-current-date'
 import { AvailabilityDialog } from '@/components/plan/availability-dialog'
 import { PlanAdjustmentNotice } from '@/components/plan/plan-adjustment-notice'
 import {
@@ -47,6 +50,8 @@ export function ExamDetail({ id }: { id: string }) {
   const { data: documents } = useDocuments()
   const { data: mastery } = useMastery(id)
   const { data: adjustments } = useAdjustments()
+  const today = useCurrentDate() || TODAY
+  const [planOpen, setPlanOpen] = useState(false)
   const [availabilityOpen, setAvailabilityOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [ordering, setOrdering] = useState(false)
@@ -107,8 +112,8 @@ export function ExamDetail({ id }: { id: string }) {
       setOrdering(false)
     }
   }
-  const upcoming = (sessions ?? []).filter((s) => s.date >= TODAY && s.status !== 'unavailable').slice(0, 6)
-  const todaySession = sessions?.find((s) => s.date === TODAY)
+  const upcoming = (sessions ?? []).filter((s) => s.date >= today && s.status !== 'unavailable').slice(0, 6)
+  const todaySession = sessions?.find((s) => s.date === today)
   const continueDoc = docs.find((doc) => doc.id === todaySession?.materialId) ?? docs[0]
   const adjustment = adjustments?.find((a) => a.examId === exam.id)
   const weak = mastery?.filter((m) => m.needsReview) ?? []
@@ -124,8 +129,8 @@ export function ExamDetail({ id }: { id: string }) {
           >
             <ArrowLeft className="size-4" aria-hidden />I miei esami
           </Link>
-          <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-center gap-5">
+          <header className="flex flex-col gap-6 rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/10 via-card to-card p-5 md:p-7 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex min-w-0 items-center gap-5">
               <ProgressRing value={pct} size={76} stroke={5} label={`${Math.round(pct * 100)}% completato`}>
                 <span className="tabular text-base font-semibold">{Math.round(pct * 100)}%</span>
               </ProgressRing>
@@ -161,6 +166,13 @@ export function ExamDetail({ id }: { id: string }) {
                 Planner
               </Button>
               <Button
+                variant="outlined"
+                startIcon={<SlidersHorizontal size={16} />}
+                onClick={() => setPlanOpen(true)}
+              >
+                Modifica piano
+              </Button>
+              <Button
                 color="error"
                 variant="outlined"
                 disabled={deleting}
@@ -190,19 +202,44 @@ export function ExamDetail({ id }: { id: string }) {
 
         {adjustment && <PlanAdjustmentNotice adjustment={adjustment} />}
 
-        <dl className="grid grid-cols-2 gap-6 border-y border-border py-6 md:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {[
             ['Pagine studiate', `${exam.slidesCompleted} / ${exam.totalSlides}`],
             ['Ore studiate', formatDuration(exam.minutesStudied)],
             ['Disponibilità', `${formatDuration(weeklyMin)} / sett.`],
             ['Ripasso finale', `${exam.reviewDays} giorni`],
           ].map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-1">
+            <div key={label} className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-5">
               <dt className="text-xs text-muted-foreground">{label}</dt>
               <dd className="tabular text-lg font-semibold tracking-tight">{value}</dd>
             </div>
           ))}
         </dl>
+
+        <section
+          className="flex flex-col gap-4 rounded-2xl border border-primary/15 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"
+          aria-label="Gestione del piano"
+        >
+          <div>
+            <p className="font-semibold">Un imprevisto? Facciamo spazio.</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Scegli i giorni in cui non puoi studiare: il piano redistribuisce le pagine ancora da
+              completare.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {exam.startDate ? `Inizio: ${formatLong(exam.startDate)} · ` : ''}
+              {exam.unavailableDays.length} giorni esclusi · {exam.reviewDays} giorni di ripasso
+            </p>
+          </div>
+          <Button
+            className="shrink-0"
+            variant="outlined"
+            onClick={() => setPlanOpen(true)}
+            startIcon={<CalendarDays size={16} />}
+          >
+            Modifica i giorni di studio
+          </Button>
+        </section>
 
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
           <div className="flex flex-col gap-10">
@@ -326,7 +363,7 @@ export function ExamDetail({ id }: { id: string }) {
             </section>
           </div>
 
-          <aside className="flex flex-col gap-10">
+          <aside className="flex flex-col gap-6 rounded-3xl border border-border bg-card/50 p-5 lg:self-start">
             <section aria-labelledby="mastery-title">
               <SectionTitle>
                 <span id="mastery-title">Padronanza</span>
@@ -414,6 +451,7 @@ export function ExamDetail({ id }: { id: string }) {
         examId={exam.id}
         onClose={() => setAvailabilityOpen(false)}
       />
+      {planOpen && <PlanSettingsDialog exam={exam} onClose={() => setPlanOpen(false)} />}
       <MaterialPagesDialog document={pageDocument} onClose={() => setPageDocument(null)} />
     </PageContainer>
   )

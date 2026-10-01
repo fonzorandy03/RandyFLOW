@@ -27,6 +27,25 @@ import org.springframework.security.web.FilterChainProxy;
 @SpringBootTest
 @Transactional
 class BackendIntegrationTest {
+  @Test void startsOnTheChosenDayAndRedistributesAroundNewExceptionsWithoutLosingProgress() {
+    var start = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Rome")).plusDays(3);
+    var exam = core.create(new it.randyflow.dto.ApiDtos.NewExam("Piano flessibile",start.plusDays(20),"",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("Dispensa.pdf",6)),java.util.Map.of(1,60,2,60,3,60,4,60,5,60,6,60,7,60),java.util.List.of(),2,start));
+    var doc = core.materials().stream().filter(d -> d.examId().equals(exam.id())).findFirst().orElseThrow();
+    assertThat(exam.startDate()).isEqualTo(start);
+    assertThat(planner.sessions(exam.id()).get(0).date()).isEqualTo(start);
+    core.complete(doc.id(),1,null);
+    var blocked = java.util.List.of(start,start.plusDays(1),start.plusDays(7));
+    var updated = planner.settings(exam.id(),new it.randyflow.dto.ApiDtos.PlanSettings(start,blocked,3));
+    var sessions = planner.sessions(exam.id());
+    assertThat(updated.unavailableDays()).containsExactlyElementsOf(blocked);
+    assertThat(updated.reviewDays()).isEqualTo(3);
+    assertThat(sessions).allSatisfy(s -> {assertThat(blocked).doesNotContain(s.date());assertThat(s.date()).isAfterOrEqualTo(start);});
+    assertThat(sessions.stream().flatMap(s -> java.util.stream.IntStream.rangeClosed(s.slideFrom(),s.slideTo()).boxed()).toList()).containsExactlyInAnyOrder(2,3,4,5,6);
+    assertThat(core.material(doc.id()).pagesRead()).isEqualTo(1);
+    assertThat(core.material(doc.id()).studyOrder()).isEqualTo(doc.studyOrder());
+    assertThatThrownBy(() -> planner.settings(exam.id(),new it.randyflow.dto.ApiDtos.PlanSettings(exam.date(),java.util.List.of(),3))).isInstanceOf(ApiException.class);
+    assertThat(core.exam(exam.id()).unavailableDays()).containsExactlyElementsOf(blocked);
+  }
   @Autowired StudyPackageService packages;
   @Autowired CoreService core;
   @Autowired PlannerService planner;

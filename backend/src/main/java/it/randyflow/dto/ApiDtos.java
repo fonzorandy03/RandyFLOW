@@ -5,8 +5,11 @@ import jakarta.validation.constraints.*; import java.time.*; import java.util.*;
 public final class ApiDtos { private ApiDtos() {}
  public record PackageSummary(String packageId,int revision,String examId,String examName,int materialCount,int topicCount,int quizCount,int flashcardCount,int examQuestionCount,boolean isUpdate) {}
  public record PackagePreview(StudyPackageDto studyPackage, PackageSummary summary) {}
- public record ExamDto(String id,String name,String shortName,LocalDate date,String description,int totalSlides,int slidesCompleted,int minutesStudied,String status,List<String> documentIds,int reviewDays,List<LocalDate> unavailableDays,Map<Integer,Integer> availability,LocalDate createdAt) {}
- public record NewExam(@NotBlank String name,@NotNull LocalDate date,String description,@NotNull List<DocumentInput> documents,@NotNull Map<Integer,Integer> availability,@NotNull List<LocalDate> unavailableDays,@Min(0) int reviewDays) {}
+ public record ExamDto(String id,String name,String shortName,LocalDate date,String description,int totalSlides,int slidesCompleted,int minutesStudied,String status,List<String> documentIds,int reviewDays,List<LocalDate> unavailableDays,Map<Integer,Integer> availability,LocalDate createdAt,LocalDate startDate) {}
+ public record NewExam(@NotBlank String name,@NotNull LocalDate date,String description,@NotNull List<DocumentInput> documents,@NotNull Map<Integer,Integer> availability,@NotNull List<LocalDate> unavailableDays,@Min(0) int reviewDays,LocalDate startDate) {
+ public NewExam(String name,LocalDate date,String description,List<DocumentInput> documents,Map<Integer,Integer> availability,List<LocalDate> unavailableDays,int reviewDays){this(name,date,description,documents,availability,unavailableDays,reviewDays,null);}
+ }
+ public record PlanSettings(@NotNull LocalDate startDate,@NotNull List<@NotNull LocalDate> unavailableDays,@Min(0) int reviewDays) {}
  public record DocumentInput(@NotBlank String name,@Min(1) int pages) {}
  public record MaterialDto(String id,String examId,String name,String kind,int pages,int studyablePages,int lastPage,int pagesRead,List<Chapter> chapters,LocalDate updatedAt,String sizeLabel,boolean hasFile,boolean analyzed,List<PageInfo> pageSelection,Integer studyOrder) {}
  public record PageInfo(int page,String type,boolean studyable,String source) {}

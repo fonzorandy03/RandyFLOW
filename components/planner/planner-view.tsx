@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { ErrorState, PageSkeleton } from '@/components/common/states'
 import { SESSION_STATUS } from '@/components/common/status-badge'
 import { AvailabilityDialog } from '@/components/plan/availability-dialog'
+import { PlanSettingsDialog } from '@/components/plan/plan-settings-dialog'
 import { PlanAdjustmentNotice } from '@/components/plan/plan-adjustment-notice'
 import { diffDays, formatDay, formatWeekdayLong } from '@/lib/date'
 import { useCurrentDate } from '@/lib/use-current-date'
@@ -54,6 +55,7 @@ export function PlannerView() {
     }
   }, [today, refreshSessions, mutate])
   const [availabilityOpen, setAvailabilityOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
 
   if (error)
     return (
@@ -80,14 +82,23 @@ export function PlannerView() {
           title="Piano di studio"
           description="Un percorso chiaro, una sessione alla volta. Scegli un giorno e apri la dispensa giusta."
           actions={
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={() => setAvailabilityOpen(true)}
-              startIcon={<SlidersHorizontal className="size-4" />}
-            >
-              Disponibilità
-            </Button>
+            <>
+              <Button
+                variant="contained"
+                onClick={() => setPlanOpen(true)}
+                startIcon={<CalendarRange className="size-4" />}
+              >
+                Modifica piano
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={() => setAvailabilityOpen(true)}
+                startIcon={<SlidersHorizontal className="size-4" />}
+              >
+                Disponibilità
+              </Button>
+            </>
           }
         />
 
@@ -246,6 +257,7 @@ export function PlannerView() {
         examId={exam.id}
         onClose={() => setAvailabilityOpen(false)}
       />
+      {planOpen && <PlanSettingsDialog exam={exam} onClose={() => setPlanOpen(false)} />}
     </PageContainer>
   )
 }

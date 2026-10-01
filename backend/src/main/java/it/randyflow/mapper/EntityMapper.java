@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference; import com.fasterxml.jacks
 
 @Component public class EntityMapper {
  private final ObjectMapper json; private final it.randyflow.service.PageSelectionService selection; public EntityMapper(ObjectMapper json,it.randyflow.service.PageSelectionService selection){this.json=json;this.selection=selection;}
- public ExamDto exam(ExamEntity e,List<String> docs){return new ExamDto(e.id,e.name,e.shortName,e.examDate,e.description,e.totalSlides,e.slidesCompleted,e.minutesStudied,e.status,docs,e.reviewDays,read(e.unavailableDaysJson,new TypeReference<>(){}),read(e.availabilityJson,new TypeReference<>(){}),e.createdAt);}
+ public ExamDto exam(ExamEntity e,List<String> docs){return new ExamDto(e.id,e.name,e.shortName,e.examDate,e.description,e.totalSlides,e.slidesCompleted,e.minutesStudied,e.status,docs,e.reviewDays,read(e.unavailableDaysJson,new TypeReference<>(){}),read(e.availabilityJson,new TypeReference<>(){}),e.createdAt,e.startDate);}
  public MaterialDto material(StudyMaterialEntity m){return new MaterialDto(m.id,m.examId,m.name,"slides".equals(m.materialType)?"slides":"pdf",m.pageCount,m.studyablePages,m.lastPage,m.pagesRead,read(m.chaptersJson,new TypeReference<>(){}),m.updatedAt,m.fileSize==null?"—":size(m.fileSize),m.storagePath!=null,m.pageTypesJson!=null,selection.pages(m),m.studyOrder);}
  public MasteryDto mastery(TopicMasteryEntity m){return new MasteryDto(m.topicId,m.examId,m.topicName,m.score,m.trend,m.needsReview,m.slideFrom,m.slideTo,m.attempts);}
  public String write(Object value){try{return json.writeValueAsString(value);}catch(Exception e){throw new IllegalStateException(e);}}

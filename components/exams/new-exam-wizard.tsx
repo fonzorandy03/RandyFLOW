@@ -29,6 +29,7 @@ export interface ExamDraft {
   documents: DraftDocument[]
   availability: Availability
   unavailableDays: ISODate[]
+  startDate: ISODate
   reviewDays: number
 }
 
@@ -44,6 +45,7 @@ export function NewExamWizard() {
     documents: [],
     availability: DEFAULT_AVAILABILITY,
     unavailableDays: [],
+    startDate: TODAY,
     reviewDays: 7,
   })
   const update = (patch: Partial<ExamDraft>) => setDraft((d) => ({ ...d, ...patch }))
@@ -52,11 +54,15 @@ export function NewExamWizard() {
   const stepError = useMemo(() => {
     if (step === 0) {
       if (!draft.name.trim()) return 'Inserisci il nome dell’esame.'
+      if (!draft.startDate || draft.startDate < TODAY || draft.startDate > addDays(draft.date, -1))
+        return 'Scegli una data di inizio prima dell’esame.'
       if (daysLeft < 3) return 'La data deve essere almeno tra 3 giorni.'
     }
     if (step === 1 && draft.documents.length === 0) return 'Carica almeno un documento.'
     if (step === 2 && Object.values(draft.availability).every((m) => m === 0))
       return 'Indica almeno un giorno disponibile.'
+    if (step >= 3 && draft.startDate > addDays(draft.date, -draft.reviewDays))
+      return 'Riduci i giorni di ripasso o anticipa la data di inizio per lasciare tempo allo studio.'
     return null
   }, [step, draft, daysLeft])
 
@@ -79,6 +85,7 @@ export function NewExamWizard() {
         documents: draft.documents.map((d) => ({ name: d.name, pages: d.pages })),
         availability: draft.availability,
         unavailableDays: draft.unavailableDays,
+        startDate: draft.startDate,
         reviewDays: draft.reviewDays,
       })
       for (const document of draft.documents) {
@@ -156,6 +163,18 @@ export function NewExamWizard() {
                 fullWidth
               />
               <TextField
+                label="Da quando vuoi iniziare?"
+                type="date"
+                value={draft.startDate}
+                onChange={(e) => update({ startDate: e.target.value })}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  htmlInput: { min: TODAY, max: addDays(draft.date, -1) },
+                }}
+                helperText="Il piano parte dal giorno scelto, anche oggi."
+                fullWidth
+              />
+              <TextField
                 label="Note (facoltative)"
                 placeholder="Es. Scritto + orale, prof. Rossi"
                 value={draft.description}
@@ -198,6 +217,7 @@ export function NewExamWizard() {
               />
               <UnavailableDaysPicker
                 examDate={draft.date}
+                startDate={draft.startDate}
                 value={draft.unavailableDays}
                 onChange={(unavailableDays) => update({ unavailableDays })}
               />
