@@ -64,13 +64,17 @@ async function executeRequest<T>(
 }
 
 function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const label =
-    method === 'GET'
-      ? 'Carichiamo i tuoi contenuti'
-      : method === 'DELETE'
-        ? 'Aggiorniamo i tuoi dati'
-        : 'Salviamo le modifiche'
-  return withLoading(label, () => executeRequest<T>(method, path, body, signal))
+  // Ordinary reads and autosaves stay quiet. Only substantial user actions need a popup.
+  const essential =
+    method !== 'GET' &&
+    (path === '/exams' ||
+      /\/plan\/(settings|recalculate)$/.test(path) ||
+      /\/availability$/.test(path) ||
+      /\/materials\/order$/.test(path) ||
+      /\/analyze$/.test(path) ||
+      path.includes('/study-packages'))
+  const operation = () => executeRequest<T>(method, path, body, signal)
+  return essential ? withLoading('Aggiorniamo il tuo piano e i contenuti', operation) : operation()
 }
 
 export const http = {
@@ -118,20 +122,16 @@ export function configureMockStore(prepare: () => void, persist: () => void) {
   persistMock = persist
 }
 export function mockResponse<T>(factory: () => T, latency = 380): Promise<T> {
-  return withLoading(
-    'Prepariamo i tuoi contenuti',
-    () =>
-      new Promise<T>((resolve, reject) =>
-        setTimeout(() => {
-          try {
-            prepareMock()
-            const result = structuredClone(factory())
-            persistMock()
-            resolve(result)
-          } catch (error) {
-            reject(error)
-          }
-        }, latency),
-      ),
+  return new Promise<T>((resolve, reject) =>
+    setTimeout(() => {
+      try {
+        prepareMock()
+        const result = structuredClone(factory())
+        persistMock()
+        resolve(result)
+      } catch (error) {
+        reject(error)
+      }
+    }, latency),
   )
 }

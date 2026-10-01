@@ -23,7 +23,7 @@ export function PdfReader({
   const [width, setWidth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  useLoadingIndicator(loading, `Prepariamo la pagina ${page} del PDF`)
+  useLoadingIndicator(loading && !pdf, 'Apriamo la tua dispensa')
   useEffect(() => {
     let active = true
     let task: ReturnType<typeof import('pdfjs-dist').getDocument> | undefined

@@ -20,7 +20,7 @@ export function LoadingPopup() {
   const pathname = usePathname()
   const navigation = useRef<(() => void) | null>(null)
   useEffect(() => {
-    const timer = window.setTimeout(() => setVisible(Boolean(label)), label ? 120 : 180)
+    const timer = window.setTimeout(() => setVisible(Boolean(label)), label ? 450 : 0)
     return () => window.clearTimeout(timer)
   }, [label])
   useEffect(() => {
