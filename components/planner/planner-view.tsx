@@ -144,13 +144,13 @@ export function PlannerView() {
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="text-xs text-muted-foreground">Verso il tuo esame</p>
             <p className="mt-1 font-semibold">
-              {Math.max(0, diffDays(exam.date, today))} giorni ? {formatDay(exam.date)}
+              {Math.max(0, diffDays(exam.date, today))} giorni · {formatDay(exam.date)}
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="text-xs text-muted-foreground">Il tuo percorso</p>
             <p className="mt-1 font-semibold">
-              {docs.length} dispense ? {exam.slidesCompleted}/{exam.totalSlides} pagine
+              {docs.length} dispense · {exam.slidesCompleted}/{exam.totalSlides} pagine
             </p>
           </div>
         </div>

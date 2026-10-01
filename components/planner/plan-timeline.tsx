@@ -70,7 +70,7 @@ export function PlanTimeline({ sessions, today }: { today: ISODate; sessions: St
                         className="truncate text-sm font-semibold text-primary hover:underline"
                         href={s.materialId ? studyHref(s.materialId, s) : '/studio'}
                       >
-                        {s.materialName} ?
+                        {s.materialName} →
                       </Link>
                     )}
                     {s.topic && s.slideFrom !== undefined && (

@@ -94,7 +94,7 @@ export function MonthCalendar({
                 title={daySessions
                   .map(
                     (item) =>
-                      `${item.materialName ?? materialLabel(item, documents)} ? ${sessionPages(item)}`,
+                      `${item.materialName ?? materialLabel(item, documents)} · ${sessionPages(item)}`,
                   )
                   .join('\n')}
                 className={cn(
@@ -138,7 +138,7 @@ export function MonthCalendar({
                         <span className="font-medium tabular-nums">
                           <span className="hidden sm:inline">PDF </span>
                           {item.slideFrom}
-                          {item.slideTo !== item.slideFrom ? `?${item.slideTo}` : ''}
+                          {item.slideTo !== item.slideFrom ? `–${item.slideTo}` : ''}
                         </span>
                       )}
                       <span className="hidden truncate text-[10px] opacity-75 lg:block">
