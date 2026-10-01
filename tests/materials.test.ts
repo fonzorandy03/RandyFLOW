@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { compareMaterials } from '../lib/materials'
-import { studyHref } from '../lib/routes'
+import { studyHref, studyPanelHref } from '../lib/routes'
 import type { StudySession } from '../lib/types'
 
 test('uses the chosen study order before chapter numbers', () => {
@@ -36,4 +36,26 @@ test('never applies the goal of another PDF to a document link', () => {
   } as StudySession
   assert.equal(studyHref('pdf-a', session, 2), '/studio/pdf-a?page=2')
   assert.equal(studyHref('pdf-b', session, 1), '/studio/pdf-b?page=5&from=3&to=9&session=session-b')
+})
+
+test('detached study panels retain the visible page, goal and selected lesson', () => {
+  const href = studyPanelHref(
+    'doc-a',
+    'page=3&from=19&to=24&session=session-a',
+    24,
+    'explanation',
+    'Riassunto',
+    'Approfondito',
+  )
+  const url = new URL(href, 'https://randyflow.vercel.app')
+  assert.equal(url.pathname, '/studio/doc-a')
+  assert.equal(url.searchParams.get('page'), '24')
+  assert.equal(url.searchParams.get('from'), '19')
+  assert.equal(url.searchParams.get('to'), '24')
+  assert.equal(url.searchParams.get('session'), 'session-a')
+  assert.equal(url.searchParams.get('view'), 'explanation')
+  assert.equal(url.searchParams.get('detached'), '1')
+  assert.equal(url.searchParams.get('tab'), 'Riassunto')
+  assert.equal(url.searchParams.get('level'), 'Approfondito')
+  assert.equal(new URL(studyPanelHref('doc-a', url.search, 25, 'pdf'), url).searchParams.get('view'), 'pdf')
 })

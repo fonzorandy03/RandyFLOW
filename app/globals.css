@@ -1021,6 +1021,25 @@
 .reading-pdf .study-assistant {
   display: none;
 }
+.study-panel-launch {
+  flex-shrink: 0;
+}
+.reading-explanation .study-assistant.mobile-hidden,
+.reading-pdf .study-reader.mobile-hidden {
+  display: flex;
+}
+.study-workspace.is-detached {
+  gap: 12px;
+  padding: 16px;
+}
+.is-detached .study-heading .study-eyebrow,
+.is-detached .study-document-icon,
+.is-detached .study-mobile-tabs {
+  display: none;
+}
+.is-detached .study-panels {
+  min-height: 380px;
+}
 .assistant-heading {
   padding: 18px 24px 14px;
 }

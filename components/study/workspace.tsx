@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Expand,
+  ExternalLink,
   List,
   Search,
   Sparkles,
@@ -23,7 +24,7 @@ import useSWR, { mutate } from 'swr'
 import { settingsApi, studyApi, studyPackageApi } from '@/lib/api/services'
 import { ApiError, USE_MOCKS } from '@/lib/api/http'
 import { refreshPlanData, useDocument, useDocuments, useSessions } from '@/lib/hooks'
-import { studyHref } from '@/lib/routes'
+import { studyHref, studyPanelHref } from '@/lib/routes'
 import { compareMaterials } from '@/lib/materials'
 import { topicForSlide } from '@/lib/study-package'
 import type { StudyDocument } from '@/lib/types'
@@ -66,11 +67,25 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const clamp = (n: number) => Math.max(1, Math.min(doc.pages, Number.isFinite(n) ? Math.floor(n) : 1))
   const [page, setPage] = useState(() => clamp(Number(params.get('page') || doc.lastPage)))
   const [pageInput, setPageInput] = useState(String(page))
-  const [mobileTab, setMobileTab] = useState<'document' | 'assistant'>('document')
-  const [assistantTab, setAssistantTab] = useState<AssistantTab>('Spiegazione')
-  const [assistantOpen, setAssistantOpen] = useState(true)
-  const [readingMode, setReadingMode] = useState<'split' | 'pdf' | 'explanation'>('split')
-  const [explanationLevel, setExplanationLevel] = useState('Semplice')
+  const detached = params.get('detached') === '1'
+  const initialView = params.get('view')
+  const [mobileTab, setMobileTab] = useState<'document' | 'assistant'>(
+    initialView === 'explanation' ? 'assistant' : 'document',
+  )
+  const [assistantTab, setAssistantTab] = useState<AssistantTab>(
+    () => assistantTabs.find((tab) => tab === params.get('tab')) ?? 'Spiegazione',
+  )
+  const [assistantOpen, setAssistantOpen] = useState(initialView !== 'pdf')
+  const [readingMode, setReadingMode] = useState<'split' | 'pdf' | 'explanation'>(
+    initialView === 'pdf' || initialView === 'explanation' ? initialView : 'split',
+  )
+  const [explanationLevel, setExplanationLevel] = useState(
+    () =>
+      ['Semplice', 'Normale', 'Approfondito'].find((level) => level === params.get('level')) ?? 'Semplice',
+  )
+  const needsPdf = readingMode !== 'explanation'
+  const panelHref = (view: 'pdf' | 'explanation') =>
+    studyPanelHref(doc.id, params.toString(), page, view, assistantTab, explanationLevel)
   const [zoom, setZoom] = useState(100)
   const [outline, setOutline] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -122,7 +137,10 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const chapter = doc.chapters.find((item) => page >= item.from && page <= item.to)
   const missingPackage = pkg.error && (pkg.error instanceof ApiError ? pkg.error.status === 404 : USE_MOCKS)
 
-  useEffect(() => () => setFocus(false), [setFocus])
+  useEffect(() => {
+    if (detached) setFocus(true)
+    return () => setFocus(false)
+  }, [detached, setFocus])
   useEffect(() => {
     if (sessions.data) {
       void mutate(['document', doc.id])
@@ -134,7 +152,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
     return () => clearTimeout(timeout)
   }, [search])
   useEffect(() => {
-    if (USE_MOCKS) return
+    if (USE_MOCKS || !needsPdf) return
     let active = true
     let objectUrl = ''
     setPdfError(false)
@@ -152,7 +170,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
       active = false
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [doc.id, pdfAttempt])
+  }, [doc.id, pdfAttempt, needsPdf])
   useEffect(() => {
     positionQueue.current = positionQueue.current
       .then(async () => {
@@ -186,7 +204,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
     const next = clamp(value)
     setPage(next)
     setPageInput(String(next))
-    setMobileTab('document')
+    setMobileTab(readingMode === 'explanation' ? 'assistant' : 'document')
   }
   const commitPage = () => {
     if (pageInput.trim()) go(Number(pageInput))
@@ -234,7 +252,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
     }
   }
   return (
-    <div ref={root} className={`study-workspace ${focus ? 'is-focus' : ''}`}>
+    <div ref={root} className={`study-workspace ${focus ? 'is-focus' : ''} ${detached ? 'is-detached' : ''}`}>
       <header className="study-heading">
         <div className="min-w-0">
           <Link
@@ -295,44 +313,46 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           </button>
         </div>
       </header>
-      <div className="study-session-bar">
-        <div className="study-progress">
-          <div className="mb-2 flex items-center justify-between gap-4">
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <span className="size-2 rounded-full bg-success" />
-              {hasGoal ? `Obiettivo di oggi · pagine ${from}–${to}` : 'Il tuo percorso'}
-            </span>
-            <span className="tabular text-xs text-muted-foreground">
-              {done} / {goal} completate
-            </span>
+      {!detached && (
+        <div className="study-session-bar">
+          <div className="study-progress">
+            <div className="mb-2 flex items-center justify-between gap-4">
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <span className="size-2 rounded-full bg-success" />
+                {hasGoal ? `Obiettivo di oggi · pagine ${from}–${to}` : 'Il tuo percorso'}
+              </span>
+              <span className="tabular text-xs text-muted-foreground">
+                {done} / {goal} completate
+              </span>
+            </div>
+            <div
+              className="study-progress-track"
+              role="progressbar"
+              aria-label="Pagine completate"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progress)}
+            >
+              <div style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {progress >= 100
+                ? 'Obiettivo raggiunto. Prenditi un momento per ripassare.'
+                : 'Ogni pagina è un piccolo passo avanti.'}
+            </p>
           </div>
-          <div
-            className="study-progress-track"
-            role="progressbar"
-            aria-label="Pagine completate"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(progress)}
-          >
-            <div style={{ width: `${progress}%` }} />
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {progress >= 100
-              ? 'Obiettivo raggiunto. Prenditi un momento per ripassare.'
-              : 'Ogni pagina è un piccolo passo avanti.'}
-          </p>
+          <SessionTimer
+            key={doc.id}
+            documentId={doc.id}
+            examId={doc.examId}
+            page={page}
+            label={chapter?.title ?? doc.name}
+            targetMinutes={prefs.data?.sessionMinutes}
+            breakMinutes={prefs.data?.breakMinutes}
+            autoBreak={prefs.data?.autoBreak}
+          />
         </div>
-        <SessionTimer
-          key={doc.id}
-          documentId={doc.id}
-          examId={doc.examId}
-          page={page}
-          label={chapter?.title ?? doc.name}
-          targetMinutes={prefs.data?.sessionMinutes}
-          breakMinutes={prefs.data?.breakMinutes}
-          autoBreak={prefs.data?.autoBreak}
-        />
-      </div>
+      )}
       {error && (
         <div
           role="alert"
@@ -408,6 +428,19 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           aria-label="Documento"
           className={`study-reader ${mobileTab === 'document' ? '' : 'mobile-hidden'}`}
         >
+          <div className="study-panel-launch flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+            <span className="text-xs font-medium text-muted-foreground">Documento PDF</span>
+            <a
+              className="study-action text-xs"
+              href={panelHref('pdf')}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Apri il PDF in una nuova scheda"
+            >
+              <ExternalLink size={14} />
+              Apri PDF in nuova scheda
+            </a>
+          </div>
           <div className="reader-toolbar">
             <div className="flex items-center gap-1">
               <button
@@ -659,6 +692,19 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
             aria-label="Assistente di studio"
             className={`study-assistant ${mobileTab === 'assistant' ? '' : 'mobile-hidden'}`}
           >
+            <div className="study-panel-launch flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+              <span className="text-xs font-medium text-muted-foreground">Spiegazioni e riassunti</span>
+              <a
+                className="study-action text-xs"
+                href={panelHref('explanation')}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Apri spiegazioni e riassunti in una nuova scheda"
+              >
+                <ExternalLink size={14} />
+                Apri in nuova scheda
+              </a>
+            </div>
             <div className="assistant-heading">
               <div className="flex items-center gap-3">
                 <span className="assistant-symbol">
