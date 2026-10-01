@@ -1287,3 +1287,48 @@
     font-size: 16px;
   }
 }
+
+/* Detached browser windows contain only the original, resizable study panel. */
+.study-workspace.is-floating {
+  height: 100dvh;
+  min-height: 0;
+  padding: 8px;
+  gap: 0;
+  overflow: hidden;
+}
+.is-floating .study-heading,
+.is-floating .study-reading-controls {
+  display: none;
+}
+.is-floating .study-panels {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+.is-floating .study-reader,
+.is-floating .study-assistant {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+.is-floating .reader-body,
+.is-floating .assistant-content {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.is-floating .reader-body {
+  overflow: hidden;
+}
+.is-floating .pdf-stage,
+.is-floating .reader-outline {
+  height: 100%;
+  min-height: 0;
+}
+.is-floating .reader-toolbar,
+.is-floating .reader-footer,
+.is-floating .assistant-heading,
+.is-floating .assistant-tabs,
+.is-floating .assistant-footer {
+  flex-shrink: 0;
+}

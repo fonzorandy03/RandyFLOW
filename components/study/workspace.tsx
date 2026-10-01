@@ -68,6 +68,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [page, setPage] = useState(() => clamp(Number(params.get('page') || doc.lastPage)))
   const [pageInput, setPageInput] = useState(String(page))
   const detached = params.get('detached') === '1'
+  const floating = params.get('floating') === '1'
   const initialView = params.get('view')
   const [mobileTab, setMobileTab] = useState<'document' | 'assistant'>(
     initialView === 'explanation' ? 'assistant' : 'document',
@@ -86,6 +87,17 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const needsPdf = readingMode !== 'explanation'
   const panelHref = (view: 'pdf' | 'explanation') =>
     studyPanelHref(doc.id, params.toString(), page, view, assistantTab, explanationLevel)
+  const openPanelWindow = (event: React.MouseEvent<HTMLAnchorElement>, view: 'pdf' | 'explanation') => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    const width = Math.min(840, window.screen.availWidth)
+    const height = Math.min(900, window.screen.availHeight)
+    window.open(
+      `${panelHref(view)}&floating=1`,
+      '_blank',
+      `popup=yes,width=${width},height=${height},resizable=yes,scrollbars=yes,noopener,noreferrer`,
+    )
+  }
   const [zoom, setZoom] = useState(100)
   const [outline, setOutline] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -252,7 +264,10 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
     }
   }
   return (
-    <div ref={root} className={`study-workspace ${focus ? 'is-focus' : ''} ${detached ? 'is-detached' : ''}`}>
+    <div
+      ref={root}
+      className={`study-workspace ${focus ? 'is-focus' : ''} ${detached ? 'is-detached' : ''} ${floating ? 'is-floating' : ''}`}
+    >
       <header className="study-heading">
         <div className="min-w-0">
           <Link
@@ -433,12 +448,13 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
             <a
               className="study-action text-xs"
               href={panelHref('pdf')}
+              onClick={(event) => openPanelWindow(event, 'pdf')}
               target="_blank"
               rel="noopener noreferrer"
-              title="Apri il PDF in una nuova scheda"
+              title="Apri lo stesso lettore in una finestra spostabile e ridimensionabile"
             >
               <ExternalLink size={14} />
-              Apri PDF in nuova scheda
+              Apri PDF in finestra
             </a>
           </div>
           <div className="reader-toolbar">
@@ -697,12 +713,13 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
               <a
                 className="study-action text-xs"
                 href={panelHref('explanation')}
+                onClick={(event) => openPanelWindow(event, 'explanation')}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Apri spiegazioni e riassunti in una nuova scheda"
+                title="Apri spiegazioni e riassunti in una finestra spostabile e ridimensionabile"
               >
                 <ExternalLink size={14} />
-                Apri in nuova scheda
+                Apri in finestra
               </a>
             </div>
             <div className="assistant-heading">
@@ -722,6 +739,29 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
                 <p>{topic?.name ?? chapter?.title ?? 'Il tuo documento'}</p>
               </div>
             </div>
+            {floating && (
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-2">
+                <button
+                  className="study-icon"
+                  aria-label="Pagina precedente"
+                  disabled={page <= 1}
+                  onClick={() => go(page - 1)}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-sm tabular">
+                  Pagina {page} / {doc.pages}
+                </span>
+                <button
+                  className="study-icon"
+                  aria-label="Pagina successiva"
+                  disabled={page >= doc.pages}
+                  onClick={() => go(page + 1)}
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
             {topic && (
               <div role="tablist" aria-label="Contenuti di studio" className="assistant-tabs">
                 {assistantTabs.map((item) => (
