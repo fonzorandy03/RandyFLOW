@@ -829,7 +829,7 @@ function AssistantContent({
     const key = level === 'Semplice' ? 'simple' : level === 'Approfondito' ? 'deep' : 'normal'
     return (
       <div className="explanation-article">
-        <h3 className="explanation-title">{topic.name}</h3>
+        <LessonContent text={topic.explanations[key]} />
         {topic.studyable &&
           (topic.explanations[key].trim().split(/\s+/).length < 100 ||
             /[\u0000-\u0008\u000b\u000c\u000e-\u001f]|(?:…|\.\.\.)\s*$/.test(topic.explanations[key])) && (
@@ -842,7 +842,6 @@ function AssistantContent({
               <Link href="/studio">Migliora i contenuti →</Link>
             </details>
           )}
-        <LessonContent text={topic.explanations[key]} />
         <SlideRefs refs={refs} go={go} />
       </div>
     )
