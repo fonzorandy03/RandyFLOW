@@ -3,15 +3,18 @@
 import Button from '@mui/material/Button'
 import { CalendarDays, CalendarRange, List, SlidersHorizontal } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PageContainer } from '@/components/layout/app-shell'
 import { PageHeader } from '@/components/common/page-header'
 import { ErrorState, PageSkeleton } from '@/components/common/states'
 import { SESSION_STATUS } from '@/components/common/status-badge'
 import { AvailabilityDialog } from '@/components/plan/availability-dialog'
 import { PlanAdjustmentNotice } from '@/components/plan/plan-adjustment-notice'
-import { TODAY } from '@/lib/date'
-import { useAdjustments, useExams, useSessions } from '@/lib/hooks'
+import { diffDays, formatDay, formatWeekdayLong } from '@/lib/date'
+import { useCurrentDate } from '@/lib/use-current-date'
+import { compareMaterials } from '@/lib/materials'
+import { materialTone } from '@/lib/planner-materials'
+import { useAdjustments, useDocuments, useExams, useSessions } from '@/lib/hooks'
 import type { ISODate, SessionStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { DayPanel } from './day-panel'
@@ -36,10 +39,20 @@ export function PlannerView() {
   const sorted = exams ? [...exams].sort((a, b) => a.date.localeCompare(b.date)) : []
   const examId = params.get('exam') ?? sorted[0]?.id
   const exam = sorted.find((e) => e.id === examId) ?? sorted[0]
-  const { data: sessions } = useSessions(exam?.id)
+  const { data: sessions, mutate: refreshSessions, error: sessionError } = useSessions(exam?.id)
+  const { data: documents } = useDocuments()
+  const today = useCurrentDate()
   const { data: adjustments } = useAdjustments()
   const [view, setView] = useState<'month' | 'timeline'>('month')
-  const [selected, setSelected] = useState<ISODate>(TODAY)
+  const [selection, setSelected] = useState<ISODate | null>(null)
+  const selected = selection ?? today
+  const [calendarReset, setCalendarReset] = useState(0)
+  useEffect(() => {
+    if (today) {
+      void refreshSessions()
+      void mutate()
+    }
+  }, [today, refreshSessions, mutate])
   const [availabilityOpen, setAvailabilityOpen] = useState(false)
 
   if (error)
@@ -48,23 +61,24 @@ export function PlannerView() {
         <ErrorState onRetry={() => mutate()} />
       </PageContainer>
     )
-  if (isLoading || !exam)
+  if (isLoading || !exam || !today)
     return (
       <PageContainer>
         <PageSkeleton />
       </PageContainer>
     )
 
+  const docs = documents?.filter((d) => d.examId === exam.id).sort(compareMaterials) ?? []
   const adjustment = adjustments?.find((a) => a.examId === exam.id)
   const selectedSessions = sessions?.filter((s) => s.date === selected) ?? []
 
   return (
     <PageContainer>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="Planner"
           title="Piano di studio"
-          description="Il piano si adatta a quello che riesci davvero a fare."
+          description="Un percorso chiaro, una sessione alla volta. Scegli un giorno e apri la dispensa giusta."
           actions={
             <Button
               variant="outlined"
@@ -92,7 +106,7 @@ export function PlannerView() {
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
-                {e.shortName}
+                {e.name}
               </button>
             ))}
           </div>
@@ -100,7 +114,7 @@ export function PlannerView() {
             {(
               [
                 ['month', 'Mese', CalendarDays],
-                ['timeline', 'Timeline', List],
+                ['timeline', 'Agenda', List],
               ] as const
             ).map(([v, label, Icon]) => (
               <button
@@ -122,9 +136,64 @@ export function PlannerView() {
           </div>
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-xs text-muted-foreground">Oggi</p>
+            <p className="mt-1 font-semibold capitalize">{formatWeekdayLong(today)}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Verso il tuo esame</p>
+            <p className="mt-1 font-semibold">
+              {Math.max(0, diffDays(exam.date, today))} giorni ? {formatDay(exam.date)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Il tuo percorso</p>
+            <p className="mt-1 font-semibold">
+              {docs.length} dispense ? {exam.slidesCompleted}/{exam.totalSlides} pagine
+            </p>
+          </div>
+        </div>
+        <section
+          aria-label="Legenda delle dispense"
+          className="rounded-2xl border border-border bg-card/60 p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium">Le tue dispense</p>
+            <button
+              className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary"
+              onClick={() => {
+                setSelected(null)
+                setCalendarReset((n) => n + 1)
+              }}
+            >
+              Vai a oggi
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {docs.map((doc, index) => (
+              <div
+                key={doc.id}
+                className={`flex max-w-full items-center gap-2 rounded-xl border px-3 py-2 text-xs ${materialTone(index)}`}
+              >
+                <span className="shrink-0 font-semibold">Dispensa {index + 1}</span>
+                <span className="truncate" title={doc.name}>
+                  {doc.name}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            I numeri indicano le pagine del PDF originale, contando anche copertina e indice. Le pagine
+            escluse non sono assegnate allo studio. Seleziona un giorno per vedere il file e aprirlo alla
+            pagina giusta.
+          </p>
+        </section>
         {adjustment && <PlanAdjustmentNotice adjustment={adjustment} examName={exam.name} />}
 
-        {!sessions ? (
+        {sessionError ? (
+          <ErrorState onRetry={() => refreshSessions()} />
+        ) : !sessions ? (
           <PageSkeleton />
         ) : sessions.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center text-sm text-muted-foreground">
@@ -132,21 +201,35 @@ export function PlannerView() {
             Nessuna sessione pianificata per questo esame.
           </div>
         ) : view === 'month' ? (
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
             <MonthCalendar
+              key={`${exam.id}-${calendarReset}-${selected.slice(0, 7)}`}
+              today={today}
+              documents={docs}
               sessions={sessions}
               examDate={exam.date}
               selected={selected}
               onSelect={setSelected}
             />
             <div className="flex flex-col gap-4">
-              {selectedSessions.length ? selectedSessions.map((session) => (
-                <DayPanel key={session.id} date={selected} session={session} exam={exam} />
-              )) : <DayPanel date={selected} exam={exam} />}
+              {selectedSessions.length ? (
+                selectedSessions.map((session) => (
+                  <DayPanel
+                    key={session.id}
+                    today={today}
+                    documents={docs}
+                    date={selected}
+                    session={session}
+                    exam={exam}
+                  />
+                ))
+              ) : (
+                <DayPanel today={today} documents={docs} date={selected} exam={exam} />
+              )}
             </div>
           </div>
         ) : (
-          <PlanTimeline sessions={sessions} />
+          <PlanTimeline today={today} sessions={sessions} />
         )}
 
         <ul className="flex flex-wrap gap-x-5 gap-y-2" aria-label="Legenda">

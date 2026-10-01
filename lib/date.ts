@@ -1,7 +1,17 @@
 import type { ISODate, Weekday } from './types'
 
-/** Fixed "today" so the demo stays coherent with mock data. */
-export const TODAY: ISODate = '2026-09-30'
+/** Calendar date in the application's Italian time zone, independent of UTC midnight. */
+export function currentDate(now = new Date()): ISODate {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Rome',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const part = (type: string) => parts.find((p) => p.type === type)!.value
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+export const TODAY: ISODate = process.env.NEXT_PUBLIC_DATA_MODE === 'mock' ? '2026-09-30' : currentDate()
 
 const MONTHS_SHORT = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']
 const MONTHS_LONG = [
@@ -52,7 +62,7 @@ export function diffDays(a: ISODate, b: ISODate): number {
 }
 
 export function daysUntil(date: ISODate): number {
-  return diffDays(date, TODAY)
+  return diffDays(date, process.env.NEXT_PUBLIC_DATA_MODE === 'mock' ? TODAY : currentDate())
 }
 
 export function weekday(date: ISODate): Weekday {
@@ -102,7 +112,7 @@ export function formatDuration(minutes: number): string {
 }
 
 export function relativeDay(date: ISODate): string {
-  const diff = diffDays(date, TODAY)
+  const diff = diffDays(date, process.env.NEXT_PUBLIC_DATA_MODE === 'mock' ? TODAY : currentDate())
   if (diff === 0) return 'Oggi'
   if (diff === 1) return 'Domani'
   if (diff === -1) return 'Ieri'

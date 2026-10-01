@@ -5,27 +5,40 @@ import { BookOpen, CalendarOff, Check, Circle } from 'lucide-react'
 import Link from 'next/link'
 import { SessionStatusBadge } from '@/components/common/status-badge'
 import { SessionReport } from '@/components/plan/session-report'
-import { TODAY, formatDuration, formatWeekdayLong } from '@/lib/date'
+import { formatDuration, formatWeekdayLong } from '@/lib/date'
+import { materialLabel, sessionPages } from '@/lib/planner-materials'
 import { studyHref } from '@/lib/routes'
-import type { Exam, ISODate, StudySession } from '@/lib/types'
+import type { Exam, ISODate, StudySession, StudyDocument } from '@/lib/types'
 
-export function DayPanel({ date, session, exam }: { date: ISODate; session?: StudySession; exam: Exam }) {
+export function DayPanel({
+  date,
+  session,
+  exam,
+  today,
+  documents,
+}: {
+  today: ISODate
+  documents: StudyDocument[]
+  date: ISODate
+  session?: StudySession
+  exam: Exam
+}) {
   const isExam = date === exam.date
   const canReport =
     session &&
-    date <= TODAY &&
+    date <= today &&
     session.slideFrom !== undefined &&
     ['planned', 'rescheduled'].includes(session.status)
-  const docId = session?.materialId ?? exam.documentIds[0]
+  const docId = session?.materialId ?? (exam.documentIds.length === 1 ? exam.documentIds[0] : undefined)
 
   return (
     <aside
       aria-live="polite"
-      className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-5 lg:self-start"
+      className="flex flex-col gap-5 rounded-3xl border border-primary/20 bg-gradient-to-b from-primary/5 to-card p-5 lg:self-start"
     >
       <div className="flex flex-col gap-1">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {date === TODAY ? 'Oggi' : 'Giorno selezionato'}
+          {date === today ? 'Oggi' : 'Giorno selezionato'}
         </p>
         <h2 className="text-lg font-semibold capitalize tracking-tight">{formatWeekdayLong(date)}</h2>
       </div>
@@ -57,12 +70,18 @@ export function DayPanel({ date, session, exam }: { date: ISODate; session?: Stu
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <p className="text-base font-semibold">
-                {session.slideFrom !== undefined
-                  ? `Slide ${session.slideFrom}–${session.slideTo}`
-                  : 'Ripasso'}
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                {materialLabel(session, documents)}
               </p>
-              {session.materialName && <p className="text-xs font-medium text-primary">{session.materialName}</p>}
+              {session.materialName && (
+                <p className="break-words text-lg font-semibold leading-6">{session.materialName}</p>
+              )}
+              <p className="text-base font-semibold">{sessionPages(session)}</p>
+              {session.slideFrom != null && (
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Apri queste pagine nella dispensa indicata. La numerazione coincide con il PDF originale.
+                </p>
+              )}
               {session.topic && <p className="text-sm text-muted-foreground">{session.topic}</p>}
             </div>
             {session.note && (
@@ -88,15 +107,15 @@ export function DayPanel({ date, session, exam }: { date: ISODate; session?: Stu
             </ul>
           )}
 
-          {docId && session.slideFrom !== undefined && date >= TODAY && (
+          {docId && session.slideFrom !== undefined && date >= today && (
             <Button
               component={Link}
               href={studyHref(docId, session)}
-              variant={date === TODAY ? 'contained' : 'outlined'}
-              color={date === TODAY ? 'primary' : 'inherit'}
+              variant={date === today ? 'contained' : 'outlined'}
+              color={date === today ? 'primary' : 'inherit'}
               startIcon={<BookOpen className="size-4" />}
             >
-              {date === TODAY ? 'Inizia la sessione' : 'Studia in anticipo'}
+              {date === today ? 'Inizia la sessione' : 'Studia in anticipo'}
             </Button>
           )}
 

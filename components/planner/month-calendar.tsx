@@ -4,8 +4,9 @@ import IconButton from '@mui/material/IconButton'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { SESSION_STATUS } from '@/components/common/status-badge'
-import { TODAY, formatDuration, formatWeekdayLong, monthLabel, parseISO, toISO } from '@/lib/date'
-import type { ISODate, StudySession } from '@/lib/types'
+import { formatDuration, formatWeekdayLong, monthLabel, parseISO, toISO } from '@/lib/date'
+import type { ISODate, StudySession, StudyDocument } from '@/lib/types'
+import { materialLabel, materialTone, sessionPages } from '@/lib/planner-materials'
 import { cn } from '@/lib/utils'
 
 const HEAD = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
@@ -22,10 +23,14 @@ function monthGrid(year: number, month: number): (ISODate | null)[] {
 
 export function MonthCalendar({
   sessions,
+  today,
+  documents,
   examDate,
   selected,
   onSelect,
 }: {
+  today: ISODate
+  documents: StudyDocument[]
   sessions: StudySession[]
   examDate: ISODate
   selected: ISODate
@@ -71,7 +76,7 @@ export function MonthCalendar({
               return (
                 <div
                   key={`e-${i}`}
-                  className="min-h-16 border-b border-r border-border bg-muted/30 md:min-h-24"
+                  className="min-h-24 border-b border-r border-border bg-muted/30 md:min-h-32"
                 />
               )
             const daySessions = byDate.get(date) ?? []
@@ -85,9 +90,15 @@ export function MonthCalendar({
                 type="button"
                 onClick={() => onSelect(date)}
                 aria-pressed={isSel}
-                aria-label={`${formatWeekdayLong(date)}${status ? `, ${SESSION_STATUS[status].label}` : ''}`}
+                aria-label={`${formatWeekdayLong(date)}${isExam ? ', Esame' : ''}${daySessions.map((item) => `, ${item.materialName ?? materialLabel(item, documents)}, ${sessionPages(item)}`).join('')}`}
+                title={daySessions
+                  .map(
+                    (item) =>
+                      `${item.materialName ?? materialLabel(item, documents)} ? ${sessionPages(item)}`,
+                  )
+                  .join('\n')}
                 className={cn(
-                  'group relative flex min-h-16 flex-col items-start gap-1 border-b border-r border-border p-1.5 text-left transition-colors md:min-h-24 md:p-2',
+                  'group relative flex min-h-24 flex-col items-start gap-1 border-b border-r border-border p-1 text-left transition-colors md:min-h-32 md:p-2.5',
                   '[&:nth-child(7n)]:border-r-0',
                   isSel ? 'bg-primary/6' : 'hover:bg-muted/60',
                   status === 'unavailable' && 'bg-muted/40',
@@ -96,41 +107,55 @@ export function MonthCalendar({
                 <span
                   className={cn(
                     'tabular flex size-6 items-center justify-center rounded-full text-xs font-medium',
-                    date === TODAY && 'bg-primary text-primary-foreground',
-                    isExam && date !== TODAY && 'bg-foreground text-background',
-                    date < TODAY && date !== TODAY && !isExam && 'text-muted-foreground',
+                    date === today && 'bg-primary text-primary-foreground',
+                    isExam && date !== today && 'bg-foreground text-background',
+                    date < today && date !== today && !isExam && 'text-muted-foreground',
                   )}
                 >
                   {parseISO(date).getUTCDate()}
                 </span>
-                {status && status !== 'unavailable' && (
-                  <>
+                {isExam ? (
+                  <span className="w-full rounded-lg bg-foreground px-1.5 py-1 text-[10px] font-semibold text-background">
+                    Esame
+                  </span>
+                ) : (
+                  daySessions.slice(0, 2).map((item) => (
                     <span
-                      className={cn('size-1.5 rounded-full md:hidden', SESSION_STATUS[status].dot)}
-                      aria-hidden
-                    />
-                    <span
-                      className={cn(
-                        'hidden w-full truncate rounded-md px-1.5 py-0.5 text-[11px] font-medium md:block',
-                        SESSION_STATUS[status].chip,
-                      )}
+                      key={item.id}
+                      className={`flex w-full flex-col gap-0.5 rounded-lg border px-1 py-1 text-[9px] leading-4 md:px-1.5 md:text-[11px] ${materialTone(
+                        Math.max(
+                          0,
+                          documents.findIndex((doc) => doc.id === item.materialId),
+                        ),
+                      )}`}
                     >
-                      {isExam
-                        ? 'Esame'
-                        : daySessions.length > 1
-                          ? `${daySessions.length} sessioni`
-                          : s?.slideFrom !== undefined
-                            ? `${s.slideFrom}–${s.slideTo}`
-                          : status === 'review'
-                            ? 'Ripasso'
-                            : SESSION_STATUS[status].label}
-                    </span>
-                    {s && !isExam && (
-                      <span className="tabular hidden text-[11px] text-muted-foreground md:block">
-                        {formatDuration(daySessions.reduce((sum, item) => sum + item.durationMin, 0))}
+                      <span className="truncate font-semibold">
+                        {item.slideFrom != null
+                          ? materialLabel(item, documents)
+                          : SESSION_STATUS[item.status].label}
                       </span>
-                    )}
-                  </>
+                      {item.slideFrom != null && (
+                        <span className="font-medium tabular-nums">
+                          <span className="hidden sm:inline">PDF </span>
+                          {item.slideFrom}
+                          {item.slideTo !== item.slideFrom ? `?${item.slideTo}` : ''}
+                        </span>
+                      )}
+                      <span className="hidden truncate text-[10px] opacity-75 lg:block">
+                        {item.materialName}
+                      </span>
+                    </span>
+                  ))
+                )}
+                {daySessions.length > 2 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    +{daySessions.length - 2} sessioni
+                  </span>
+                )}
+                {s && !isExam && (
+                  <span className="mt-auto text-[10px] text-muted-foreground">
+                    {formatDuration(daySessions.reduce((sum, item) => sum + item.durationMin, 0))}
+                  </span>
                 )}
                 {isSel && (
                   <span
