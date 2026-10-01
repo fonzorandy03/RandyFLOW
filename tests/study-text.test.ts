@@ -16,3 +16,8 @@ test('keeps existing Markdown and fenced code intact', () => {
   const text = '## Una lezione\n\nUn testo **importante**.\n\n```text\nDa ricordare\n```'
   assert.equal(formatStudyText(text), text)
 })
+test('turns flattened diagram branches into readable lists', () => {
+  const result = formatStudyText('Schema KITCHENHAM | +- CORRECTIVE → errore. `- ENHANCEMENTS → miglioramento.')
+  assert.ok(result.includes('\n- CORRECTIVE'))
+  assert.ok(result.includes('\n- ENHANCEMENTS'))
+})

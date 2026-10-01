@@ -8,6 +8,7 @@ export function formatStudyText(source: string): string {
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
     .replace(/\u00ad/g, '')
     .replace(/([\p{L}]{3,})-\s+([\p{Ll}]{2,})/gu, '$1$2')
+    .replace(/\s*(?:\|\s*)?(?:\+|`|├|└)[─-]+\s+(?=[A-Z])/g, '\n- ')
   // Preserve authored Markdown. Repair flattened PDF text without guessing new content.
   {
     const labels =
