@@ -1,10 +1,19 @@
 'use client'
 
 import Button from '@mui/material/Button'
-import { ArrowLeft, BookOpen, CalendarDays, FileText, Layers, ListChecks, SearchX, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  BookOpen,
+  CalendarDays,
+  FileText,
+  Layers,
+  ListChecks,
+  SearchX,
+  Trash2,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PageContainer } from '@/components/layout/app-shell'
 import { MasteryIndicator } from '@/components/common/mastery-indicator'
 import { SectionTitle } from '@/components/common/page-header'
@@ -25,6 +34,9 @@ import {
 } from '@/lib/date'
 import { useAdjustments, useDocuments, useExams, useMastery, useSessions } from '@/lib/hooks'
 import { studyHref } from '@/lib/routes'
+import { compareMaterials } from '@/lib/materials'
+import { MaterialPagesDialog } from '../study/material-pages-dialog'
+import type { StudyDocument } from '@/lib/types'
 import { examsApi } from '@/lib/api/services'
 import { mutate as mutateCache } from 'swr'
 
@@ -36,7 +48,14 @@ export function ExamDetail({ id }: { id: string }) {
   const { data: adjustments } = useAdjustments()
   const [availabilityOpen, setAvailabilityOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [pageDocument, setPageDocument] = useState<StudyDocument | null>(null)
   const router = useRouter()
+  useEffect(() => {
+    if (sessions) {
+      void mutateCache('documents')
+      void mutateCache('exams')
+    }
+  }, [sessions])
 
   if (error)
     return (
@@ -69,7 +88,7 @@ export function ExamDetail({ id }: { id: string }) {
     )
 
   const pct = exam.totalSlides ? exam.slidesCompleted / exam.totalSlides : 0
-  const docs = documents?.filter((d) => exam.documentIds.includes(d.id)) ?? []
+  const docs = documents?.filter((d) => d.examId === id).sort(compareMaterials) ?? []
   const upcoming = (sessions ?? []).filter((s) => s.date >= TODAY && s.status !== 'unavailable').slice(0, 6)
   const todaySession = sessions?.find((s) => s.date === TODAY)
   const continueDoc = docs.find((doc) => doc.id === todaySession?.materialId) ?? docs[0]
@@ -129,7 +148,12 @@ export function ExamDetail({ id }: { id: string }) {
                 disabled={deleting}
                 startIcon={<Trash2 className="size-4" />}
                 onClick={async () => {
-                  if (!window.confirm(`Eliminare definitivamente l’esame “${exam.name}” e tutti i dati collegati?`)) return
+                  if (
+                    !window.confirm(
+                      `Eliminare definitivamente l’esame “${exam.name}” e tutti i dati collegati?`,
+                    )
+                  )
+                    return
                   setDeleting(true)
                   try {
                     await examsApi.delete(exam.id)
@@ -150,7 +174,7 @@ export function ExamDetail({ id }: { id: string }) {
 
         <dl className="grid grid-cols-2 gap-6 border-y border-border py-6 md:grid-cols-4">
           {[
-            ['Slide completate', `${exam.slidesCompleted} / ${exam.totalSlides}`],
+            ['Pagine studiate', `${exam.slidesCompleted} / ${exam.totalSlides}`],
             ['Ore studiate', formatDuration(exam.minutesStudied)],
             ['Disponibilità', `${formatDuration(weeklyMin)} / sett.`],
             ['Ripasso finale', `${exam.reviewDays} giorni`],
@@ -187,17 +211,24 @@ export function ExamDetail({ id }: { id: string }) {
                         <p className="text-sm font-medium capitalize">{relativeDay(s.date)}</p>
                         <p className="text-xs text-muted-foreground">{formatDay(s.date)}</p>
                       </div>
-                      <div className="flex min-w-0 flex-1 flex-col">
+                      <Link
+                        href={studyHref(s.materialId ?? continueDoc?.id ?? '', s)}
+                        className="flex min-w-0 flex-1 flex-col hover:text-primary"
+                      >
+                        {s.materialName && (
+                          <p className="mb-1 break-words text-sm font-semibold text-primary">
+                            {s.materialName}
+                          </p>
+                        )}
                         <p className="truncate text-sm font-medium">
                           {s.slideFrom !== undefined
-                            ? `Slide ${s.slideFrom}–${s.slideTo}`
+                            ? `Pagine PDF ${s.slideFrom}–${s.slideTo}`
                             : (s.topic ?? 'Ripasso')}
                         </p>
-                        {s.materialName && <p className="truncate text-xs font-medium text-primary">{s.materialName}</p>}
                         {s.topic && s.slideFrom !== undefined && (
                           <p className="truncate text-xs text-muted-foreground">{s.topic}</p>
                         )}
-                      </div>
+                      </Link>
                       <span className="tabular hidden text-sm text-muted-foreground sm:block">
                         {formatDuration(s.durationMin)}
                       </span>
@@ -212,8 +243,12 @@ export function ExamDetail({ id }: { id: string }) {
               <SectionTitle>
                 <span id="docs-title">Materiale</span>
               </SectionTitle>
+              <p className="mb-4 text-sm text-muted-foreground">
+                {docs.length} dispense · le pagine sono numerate separatamente in ogni PDF. Copertine e indici
+                riconosciuti non fanno parte del piano.
+              </p>
               <ul className="flex flex-col gap-3">
-                {docs.map((d) => (
+                {docs.map((d, index) => (
                   <li key={d.id}>
                     <Link
                       href={studyHref(d.id, null, d.lastPage)}
@@ -224,7 +259,10 @@ export function ExamDetail({ id }: { id: string }) {
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-2">
                         <div className="flex items-baseline justify-between gap-3">
-                          <p className="truncate text-sm font-medium">{d.name}</p>
+                          <p className="break-words text-sm font-medium">
+                            <span className="mr-2 text-xs text-primary">DISPENSA {index + 1}</span>
+                            {d.name}
+                          </p>
                           <span className="tabular shrink-0 text-xs text-muted-foreground">
                             {Math.round((d.pagesRead / Math.max(1, d.studyablePages)) * 100)}%
                           </span>
@@ -236,10 +274,17 @@ export function ExamDetail({ id }: { id: string }) {
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {d.pages} slide · ultima posizione: slide {d.lastPage}
+                          {d.studyablePages} pagine da studiare su {d.pages} nel PDF ·{' '}
+                          {d.pages - d.studyablePages} escluse · ultima pagina aperta: {d.lastPage}
                         </p>
                       </div>
                     </Link>
+                    <button
+                      className="mt-2 px-4 text-xs font-medium text-primary hover:underline"
+                      onClick={() => setPageDocument(d)}
+                    >
+                      Controlla pagine da studiare
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -334,6 +379,7 @@ export function ExamDetail({ id }: { id: string }) {
         examId={exam.id}
         onClose={() => setAvailabilityOpen(false)}
       />
+      <MaterialPagesDialog document={pageDocument} onClose={() => setPageDocument(null)} />
     </PageContainer>
   )
 }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { mutate } from 'swr'
 import { studyPackageApi } from '@/lib/api/services'
 import { refreshPlanData } from '@/lib/hooks'
+import { useDocuments } from '@/lib/hooks'
 import { StudyPackageValidationError } from '@/lib/study-package'
 import type { Exam, StudyPackage, StudyPackageSummary } from '@/lib/types'
 
@@ -17,12 +18,15 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [examId, setExamId] = useState('')
+  const documents = useDocuments()
+  const [materialMap, setMaterialMap] = useState<Record<string, string>>({})
   if (exams.length === 0)
     return (
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-semibold">Importa Study Package</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Prima crea un esame e il relativo piano di studio. Il file .study potrà essere caricato soltanto dopo la creazione del piano.
+          Prima crea un esame e il relativo piano di studio. Il file .study potrà essere caricato soltanto
+          dopo la creazione del piano.
         </p>
         <Button component={Link} href="/esami/nuovo" variant="contained" className="mt-4">
           Crea esame e piano
@@ -31,6 +35,7 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
     )
   const select = async (file?: File) => {
     setPreview(undefined)
+    setMaterialMap({})
     setIssues([])
     setMessage('')
     if (!file) return
@@ -62,7 +67,23 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
     }
     setBusy(true)
     try {
-      const result = await studyPackageApi.import(preview.package, examId)
+      const selectedDocuments = documents.data?.filter((doc) => doc.examId === examId) ?? []
+      const mapping: Record<string, string> = {}
+      for (const material of preview.package.materials) {
+        const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
+        const matches = selectedDocuments.filter((doc) => normalize(doc.name) === normalize(material.name))
+        const selected = materialMap[material.id] || (matches.length === 1 ? matches[0].id : '')
+        if (!selected) throw new Error(`Scegli il PDF al quale associare ${material.name}.`)
+        const doc = selectedDocuments.find((item) => item.id === selected)
+        if (!doc || doc.pages !== material.pageCount)
+          throw new Error(
+            `Il numero di pagine di ${material.name} non coincide con il PDF scelto. Usa la numerazione fisica del documento.`,
+          )
+        if (Object.values(mapping).includes(selected))
+          throw new Error('Ogni materiale deve essere associato a una dispensa diversa.')
+        mapping[material.id] = selected
+      }
+      const result = await studyPackageApi.import(preview.package, examId, mapping)
       await refreshPlanData()
       await mutate(
         (key) =>
@@ -134,14 +155,53 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
               <select
                 className="mt-2 block w-full rounded-lg border bg-card p-3"
                 value={examId}
-                onChange={(event) => setExamId(event.target.value)}
+                onChange={(event) => {
+                  setExamId(event.target.value)
+                  setMaterialMap({})
+                }}
               >
                 <option value="">Scegli un esame</option>
                 {exams.map((exam) => (
-                  <option key={exam.id} value={exam.id}>{exam.name}</option>
+                  <option key={exam.id} value={exam.id}>
+                    {exam.name}
+                  </option>
                 ))}
               </select>
             </label>
+          )}
+          {examId && (
+            <div className="mt-5 space-y-3 rounded-xl bg-muted/50 p-4">
+              <h4 className="text-sm font-semibold">Associa ogni contenuto alla sua dispensa</h4>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Scegli il PDF originale corretto. Il numero di pagine deve coincidere; i file non vengono
+                abbinati in base al loro ordine.
+              </p>
+              {preview.package.materials.map((material) => {
+                const available = documents.data?.filter((doc) => doc.examId === examId) ?? []
+                const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
+                const matches = available.filter((doc) => normalize(doc.name) === normalize(material.name))
+                return (
+                  <label key={material.id} className="block text-xs font-medium">
+                    {material.name} · {material.pageCount} pagine nel package
+                    <select
+                      aria-label={`PDF per ${material.name}`}
+                      className="mt-2 block w-full rounded-lg border bg-card p-3 text-sm"
+                      value={materialMap[material.id] ?? (matches.length === 1 ? matches[0].id : '')}
+                      onChange={(event) =>
+                        setMaterialMap((current) => ({ ...current, [material.id]: event.target.value }))
+                      }
+                    >
+                      <option value="">Seleziona la dispensa corretta</option>
+                      {available.map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {doc.name} · {doc.pages} pagine
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )
+              })}
+            </div>
           )}
           <Button className="mt-4" variant="contained" onClick={install} disabled={busy}>
             {preview.summary.isUpdate ? 'Aggiorna package' : 'Importa package'}

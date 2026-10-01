@@ -1,11 +1,15 @@
 # Prompt ChatGPT per Study Package v1.0
 
-Copia il testo seguente in ChatGPT e allega il PDF.
+Copia il testo seguente in ChatGPT e allega tutte le dispense.
 
-``text
+```text
 Analizza integralmente il PDF allegato, pagina per pagina, e crea un RandyFLOW Study Package v1.0.
 
 Restituisci esclusivamente un singolo oggetto JSON valido, senza blocchi Markdown, commenti o testo introduttivo. Il file sarà salvato con estensione .study.
+
+SE ALLEGO PIU FILE
+Crea un materiale distinto per ogni PDF, mantenendo in materials.name il nome esatto del file allegato e in pageCount il suo numero reale di pagine. Non unire le dispense e non continuare la numerazione da un file all'altro: ogni PDF riparte da pagina 1. Usa materialId distinti e collega ogni topic esclusivamente al PDF dal quale proviene.
+Per slideRange e slideRefs usa la posizione fisica nel PDF, contando anche copertina e indice. Ignora la numerazione stampata nel piede della pagina, che potrebbe iniziare dopo la copertina. Non rinominare i file e non scambiare i capitoli tra le dispense.
 
 CONTROLLO VISIVO E TESTUALE OBBLIGATORIO
 1. Conta le pagine reali e crea internamente un inventario numerato da 1 a pageCount.
@@ -54,4 +58,4 @@ CONTROLLO FINALE
 - Nessun contenuto è inventato o incoerente con la pagina.
 
 Non omettere campi e restituisci soltanto il JSON.
-``
+```

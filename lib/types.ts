@@ -85,6 +85,9 @@ export interface StudyDocument {
   chapters: Chapter[]
   updatedAt: ISODate
   sizeLabel: string
+  hasFile?: boolean
+  analyzed?: boolean
+  pageSelection?: { page: number; type: string; studyable: boolean; source: string }[]
 }
 
 export type SlideKind = 'title' | 'bullets' | 'formula' | 'diagram' | 'table'

@@ -1,7 +1,7 @@
 'use client'
 import Button from '@mui/material/Button'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
@@ -22,7 +22,9 @@ import {
 import useSWR, { mutate } from 'swr'
 import { settingsApi, studyApi, studyPackageApi } from '@/lib/api/services'
 import { ApiError, USE_MOCKS } from '@/lib/api/http'
-import { refreshPlanData, useDocument, useSessions } from '@/lib/hooks'
+import { refreshPlanData, useDocument, useDocuments, useSessions } from '@/lib/hooks'
+import { studyHref } from '@/lib/routes'
+import { compareMaterials } from '@/lib/materials'
 import { topicForSlide } from '@/lib/study-package'
 import type { StudyDocument } from '@/lib/types'
 import { ErrorState, LoadingState } from '../common/states'
@@ -32,6 +34,8 @@ import { useShell } from '../layout/shell-context'
 import { SlideContent } from './slide-content'
 import { PdfReader } from './pdf-reader'
 import { SessionTimer } from './session-timer'
+import { MaterialPagesDialog } from './material-pages-dialog'
+import { pageTypeLabel } from '@/lib/materials'
 
 type AssistantTab = 'Spiegazione' | 'Riassunto' | 'Concetti' | 'Esempi' | 'Quiz' | 'Flashcard'
 const assistantTabs: AssistantTab[] = ['Spiegazione', 'Riassunto', 'Concetti', 'Esempi', 'Quiz', 'Flashcard']
@@ -54,6 +58,10 @@ export function Workspace({ id }: { id: string }) {
 }
 
 function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
+  const router = useRouter()
+  const documents = useDocuments()
+  const examDocuments =
+    documents.data?.filter((item) => item.examId === doc.examId).sort(compareMaterials) ?? []
   const params = useSearchParams()
   const clamp = (n: number) => Math.max(1, Math.min(doc.pages, Number.isFinite(n) ? Math.floor(n) : 1))
   const [page, setPage] = useState(() => clamp(Number(params.get('page') || doc.lastPage)))
@@ -72,16 +80,19 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [pdfUrl, setPdfUrl] = useState('')
   const [pdfError, setPdfError] = useState(false)
   const [pdfAttempt, setPdfAttempt] = useState(0)
+  const [managePages, setManagePages] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const positionQueue = useRef(Promise.resolve())
   const savingRef = useRef(false)
   const { focus, setFocus } = useShell()
   const toast = useToast()
   const sessions = useSessions(doc.examId)
-  const session = sessions.data?.find((item) => item.id === params.get('session'))
+  const session = sessions.data?.find(
+    (item) => item.id === params.get('session') && (!item.materialId || item.materialId === doc.id),
+  )
   const from = clamp(Number(params.get('from') || 1))
   const to = Math.max(from, clamp(Number(params.get('to') || doc.pages)))
-  const hasGoal = params.has('from') && params.has('to')
+  const hasGoal = params.has('from') && params.has('to') && (!params.has('session') || !!session)
   const count = session?.slidesDone ?? completed.filter((value) => value >= from && value <= to).length
   const total = to - from + 1
   const done = hasGoal ? Math.min(count, total) : doc.pagesRead
@@ -96,13 +107,22 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
     studyApi.search(doc.id, query),
   )
   const topic = pkg.data ? topicForSlide(pkg.data, doc.id, page) : undefined
-  const isStudyable = !topic || ((topic.pageType ?? 'content') === 'content' && (topic.studyable ?? true))
+  const pageInfo = doc.pageSelection?.find((item) => item.page === page)
+  const isStudyable =
+    pageInfo?.studyable ??
+    (!topic || ((topic.pageType ?? 'content') === 'content' && (topic.studyable ?? true)))
   const quizzes = pkg.data?.quizzes.filter((item) => item.topicId === topic?.id) ?? []
   const cards = pkg.data?.flashcards.filter((item) => item.topicId === topic?.id) ?? []
   const chapter = doc.chapters.find((item) => page >= item.from && page <= item.to)
   const missingPackage = pkg.error && (pkg.error instanceof ApiError ? pkg.error.status === 404 : USE_MOCKS)
 
   useEffect(() => () => setFocus(false), [setFocus])
+  useEffect(() => {
+    if (sessions.data) {
+      void mutate(['document', doc.id])
+      void mutate('documents')
+    }
+  }, [doc.id, sessions.data])
   useEffect(() => {
     const timeout = window.setTimeout(() => setQuery(search.trim()), 300)
     return () => clearTimeout(timeout)
@@ -208,6 +228,23 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
               <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl" title={doc.name}>
                 {doc.name.replace(/\.pdf$/i, '').replace(/_/g, ' ')}
               </h1>
+              {examDocuments.length > 1 && (
+                <select
+                  aria-label="Cambia dispensa"
+                  className="mt-2 max-w-full rounded-lg border bg-card px-2 py-1 text-xs text-muted-foreground"
+                  value={doc.id}
+                  onChange={(event) => {
+                    const selected = examDocuments.find((item) => item.id === event.target.value)
+                    if (selected) router.push(studyHref(selected.id, null, selected.lastPage))
+                  }}
+                >
+                  {examDocuments.map((item, index) => (
+                    <option key={item.id} value={item.id}>
+                      Dispensa {index + 1} di {examDocuments.length}: {item.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </div>
@@ -312,6 +349,14 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
                 title="Indice e pagine"
               >
                 <List size={18} />
+              </button>
+              <button
+                className="study-icon hidden sm:inline-flex"
+                aria-label="Gestisci pagine da studiare"
+                title="Copertine, indici e pagine da studiare"
+                onClick={() => setManagePages(true)}
+              >
+                <BookOpen size={17} />
               </button>
               <span className="toolbar-divider" />
               <button
@@ -436,6 +481,12 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           <div className="reader-body">
             {outline && (
               <nav className="reader-outline scrollbar-thin" aria-label="Indice documento">
+                <button
+                  className="mb-4 text-xs font-medium text-primary"
+                  onClick={() => setManagePages(true)}
+                >
+                  Pagine da studiare
+                </button>
                 <p className="study-eyebrow mb-3">Vai alla pagina</p>
                 {doc.chapters.map((item) => (
                   <button
@@ -500,7 +551,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
               <p className="mt-1 text-[11px] text-muted-foreground">
                 {isStudyable
                   ? 'Leggi con calma. Poi segna la pagina come completata.'
-                  : 'Pagina di servizio · non inclusa nel tuo obiettivo'}
+                  : `${pageTypeLabel[pageInfo?.type ?? topic?.pageType ?? ''] ?? 'Pagina di servizio'} · esclusa dal piano di studio`}
               </p>
             </div>
             <button
@@ -652,6 +703,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
           </section>
         )}
       </div>
+      <MaterialPagesDialog document={managePages ? doc : null} onClose={() => setManagePages(false)} />
     </div>
   )
 }

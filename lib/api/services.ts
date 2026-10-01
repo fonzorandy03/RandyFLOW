@@ -155,7 +155,8 @@ export const examsApi = {
       if (index < 0) throw new Error('Esame non trovato')
       db.exams.splice(index, 1)
       for (let i = documents.length - 1; i >= 0; i--) if (documents[i].examId === id) documents.splice(i, 1)
-      for (let i = db.sessions.length - 1; i >= 0; i--) if (db.sessions[i].examId === id) db.sessions.splice(i, 1)
+      for (let i = db.sessions.length - 1; i >= 0; i--)
+        if (db.sessions[i].examId === id) db.sessions.splice(i, 1)
     })
   },
 }
@@ -291,11 +292,27 @@ export const planApi = {
 }
 
 export const studyApi = {
+  analyze: (id: string): Promise<StudyDocument> =>
+    USE_MOCKS
+      ? mockResponse(() => {
+          const doc = documents.find((d) => d.id === id)
+          if (!doc) throw new Error('Documento non trovato')
+          return doc
+        })
+      : http.post(`/documents/${id}/analyze`),
+  selectPage: (id: string, page: number, studyable: boolean | null): Promise<StudyDocument> =>
+    USE_MOCKS
+      ? Promise.reject(new Error('La gestione delle pagine richiede il backend reale.'))
+      : http.patch(`/documents/${id}/pages/${page}/selection`, { studyable }),
   inspectPdf: (file: File): Promise<{ name: string; pages: number; bytes: number }> =>
     USE_MOCKS
       ? file.arrayBuffer().then((buffer) => {
           const text = new TextDecoder('latin1').decode(buffer)
-          return { name: file.name, pages: Math.max(1, text.match(/\/Type\s*\/Page\b/g)?.length ?? 1), bytes: file.size }
+          return {
+            name: file.name,
+            pages: Math.max(1, text.match(/\/Type\s*\/Page\b/g)?.length ?? 1),
+            bytes: file.size,
+          }
         })
       : http.upload('/materials/inspect', file),
   uploadPdf: (examId: string, file: File): Promise<StudyDocument> =>
@@ -505,22 +522,30 @@ export const studyPackageApi = {
             parseStudyPackage(source),
           )
           .then((result) => ({ package: result.studyPackage, summary: result.summary })),
-  import: (pkg: StudyPackage, examId?: string): Promise<StudyPackageSummary> => {
+  import: (
+    pkg: StudyPackage,
+    examId?: string,
+    materialMap?: Record<string, string>,
+  ): Promise<StudyPackageSummary> => {
     if (!USE_MOCKS)
-      return http.post(`/study-packages/import${examId ? `?examId=${encodeURIComponent(examId)}` : ''}`, pkg)
+      return http.post(
+        `/study-packages/import${examId ? `?examId=${encodeURIComponent(examId)}` : ''}${materialMap && examId ? `&materialMap=${encodeURIComponent(JSON.stringify(materialMap))}` : ''}`,
+        pkg,
+      )
     return mockResponse(() => {
       const current = packageRevision(pkg.packageId)
       if (current !== undefined && pkg.revision < current)
         throw new Error(`La revisione ${pkg.revision} è precedente alla revisione installata ${current}.`)
       const existingExam = db.exams.find((exam) => exam.id === pkg.exam.id)
-      const studyable = (materialId?: string) => pkg.topics.filter((topic) =>
-        (!materialId || topic.materialId === materialId) &&
-        (topic.pageType ?? 'content') === 'content' &&
-        (topic.studyable ?? true),
-      )
-      const studyableCount = (materialId?: string) => studyable(materialId).reduce(
-        (sum, topic) => sum + topic.slideRange.to - topic.slideRange.from + 1, 0,
-      )
+      const studyable = (materialId?: string) =>
+        pkg.topics.filter(
+          (topic) =>
+            (!materialId || topic.materialId === materialId) &&
+            (topic.pageType ?? 'content') === 'content' &&
+            (topic.studyable ?? true),
+        )
+      const studyableCount = (materialId?: string) =>
+        studyable(materialId).reduce((sum, topic) => sum + topic.slideRange.to - topic.slideRange.from + 1, 0)
       const totalSlides = studyableCount()
       if (existingExam) {
         existingExam.name = pkg.exam.name

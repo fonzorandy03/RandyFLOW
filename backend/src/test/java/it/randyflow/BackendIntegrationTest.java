@@ -103,9 +103,10 @@ class BackendIntegrationTest {
         .containsExactlyInAnyOrderElementsOf(exam.documentIds());
     assertThat(sessions).allSatisfy(session -> {
       assertThat(session.materialName()).isNotBlank();
-      assertThat(session.slideTo() - session.slideFrom() + 1).isGreaterThan(1);
+      assertThat(session.slideTo() - session.slideFrom() + 1).isPositive();
     });
     assertThat(sessions.stream().filter(s -> s.materialId().equals(exam.documentIds().get(1))).mapToInt(it.randyflow.dto.ApiDtos.SessionDto::slideTo).max()).hasValue(20);
+    assertThat(sessions.stream().mapToInt(s -> s.slideTo()-s.slideFrom()+1).sum()).isEqualTo(50);
   }
 
   @Test void validatesCrossReferencesAndReadsRealPdfPageCount() throws Exception {
@@ -118,6 +119,53 @@ class BackendIntegrationTest {
     }
     var uploaded = core.upload("economia", new MockMultipartFile("file", "dispensa.pdf", "application/pdf", pdf));
     assertThat(uploaded.pages()).isEqualTo(2);
+  }
+
+  @Test void refusesPackagesWithDifferentPhysicalPageCounts() throws Exception {
+    var exam = core.create(new it.randyflow.dto.ApiDtos.NewExam("PDF originale",java.time.LocalDate.now().plusMonths(2),"",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("Lezione 1.pdf",40)),java.util.Map.of(1,60),java.util.List.of(),2));
+    assertThatThrownBy(() -> packages.importPackage(packages.preview(example()).studyPackage(),exam.id())).isInstanceOf(ApiException.class).hasMessageContaining("40 pagine");
+    assertThat(core.material(exam.documentIds().get(0)).pages()).isEqualTo(40);
+    assertThat(core.material(exam.documentIds().get(0)).name()).isEqualTo("Lezione 1.pdf");
+  }
+
+  private byte[] dispensaPdf() throws Exception {
+    try (var document = new PDDocument(); var output = new java.io.ByteArrayOutputStream()) {
+      for (String content : java.util.List.of("Universita - Dispensa ISTA", "Indice\n1 Manutenzione .... 3\n2 Testing .... 4", "Definizione: manutenzione del software. Esempio e spiegazione del contenuto.", "Esercizio: confronta manutenzione e testing.")) {
+        var page = new PDPage(); document.addPage(page);
+        try (var stream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+          stream.beginText(); stream.setFont(new org.apache.pdfbox.pdmodel.font.PDType1Font(org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA),12);
+          stream.setLeading(18); stream.newLineAtOffset(40,700);
+          for (String line : content.split("\n")) { stream.showText(line); stream.newLine(); }
+          stream.endText();
+        }
+      }
+      document.save(output); return output.toByteArray();
+    }
+  }
+
+  @Test void analyzesTwoPdfsAndKeepsCoversOutOfTheirIndependentPlans() throws Exception {
+    var exam = core.create(new it.randyflow.dto.ApiDtos.NewExam("ISTA due PDF",java.time.LocalDate.now().plusDays(20),"",java.util.List.of(
+        new it.randyflow.dto.ApiDtos.DocumentInput("dispensa_ISTA_Cap5-8.pdf",4),
+        new it.randyflow.dto.ApiDtos.DocumentInput("ISTA_Dispensa_Capitoli_1-4.pdf",4)),java.util.Map.of(1,60,2,60,3,60,4,60,5,60,6,60),java.util.List.of(),2));
+    var second = core.upload(exam.id(),new MockMultipartFile("file","dispensa_ISTA_Cap5-8.pdf","application/pdf",dispensaPdf()));
+    var first = core.upload(exam.id(),new MockMultipartFile("file","ISTA_Dispensa_Capitoli_1-4.pdf","application/pdf",dispensaPdf()));
+    assertThat(first.studyablePages()).isEqualTo(2);
+    assertThat(first.pageSelection()).filteredOn(p -> !p.studyable()).extracting(it.randyflow.dto.ApiDtos.PageInfo::page).containsExactly(1,2);
+    var plan = planner.sessions(exam.id());
+    assertThat(plan.get(0).materialId()).isEqualTo(first.id());
+    assertThat(plan).allSatisfy(s -> { assertThat(s.slideFrom()).isGreaterThanOrEqualTo(3); assertThat(s.slideTo()).isLessThanOrEqualTo(4); });
+    assertThat(plan.stream().flatMap(s -> java.util.stream.IntStream.rangeClosed(s.slideFrom(),s.slideTo()).mapToObj(p -> s.materialId()+":"+p)).toList())
+        .containsExactlyInAnyOrder(first.id()+":3",first.id()+":4",second.id()+":3",second.id()+":4");
+    var wrongSession = plan.stream().filter(s -> s.materialId().equals(second.id())).findFirst().orElseThrow();
+    assertThatThrownBy(() -> core.complete(first.id(),3,wrongSession.id())).isInstanceOf(ApiException.class);
+    core.complete(first.id(),1,null); assertThat(core.material(first.id()).pagesRead()).isZero();
+    core.complete(first.id(),3,null); assertThat(core.material(first.id()).pagesRead()).isEqualTo(1);
+    assertThat(core.material(second.id()).pagesRead()).isZero();
+    core.selectPage(first.id(),1,true); core.analyze(first.id());
+    assertThat(core.material(first.id()).pageSelection().get(0).studyable()).isTrue();
+    assertThat(core.exam(exam.id()).totalSlides()).isEqualTo(5);
+    assertThat(core.material(first.id()).pagesRead()).isEqualTo(1);
+    core.selectPage(first.id(),1,null); assertThat(core.exam(exam.id()).totalSlides()).isEqualTo(4);
   }
 
   @Test void exposesVersionedRestApiAndOpenApi() throws Exception {
@@ -157,9 +205,10 @@ class BackendIntegrationTest {
 
   @Test void attachesPackageToExistingExamAndDeletesTheWholeExam() throws Exception {
     packages.importPackage(packages.preview(example()).studyPackage());
-    var created=core.create(new it.randyflow.dto.ApiDtos.NewExam("ISTA",java.time.LocalDate.now().plusMonths(2),"Piano personale",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("ISTA_Dispensa_Capitoli_1-4.pdf",40)),java.util.Map.of(1,60),java.util.List.of(),7));
+    var created=core.create(new it.randyflow.dto.ApiDtos.NewExam("ISTA",java.time.LocalDate.now().plusMonths(2),"Piano personale",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("ISTA_Dispensa_Capitoli_1-4.pdf",6)),java.util.Map.of(1,60),java.util.List.of(),7));
     String materialId=created.documentIds().get(0);
-    var attached=packages.importPackage(packages.preview(example()).studyPackage(),created.id());
+    assertThatThrownBy(() -> packages.importPackage(packages.preview(example()).studyPackage(),created.id())).isInstanceOf(ApiException.class);
+    var attached=packages.importPackage(packages.preview(example()).studyPackage(),created.id(),"{\"economia-slide\":\""+materialId+"\"}");
     assertThat(attached.examId()).isEqualTo(created.id());
     assertThat(core.exams()).hasSize(1);
     assertThat(packages.getByExam(created.id()).materials().get(0).id()).isEqualTo(materialId);

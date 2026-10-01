@@ -10,8 +10,13 @@ import { studyHref } from '@/lib/routes'
 import { formatDuration, formatDay } from '@/lib/date'
 import { StudyPackageImport } from './study-package-import'
 import { StudyPackagePromptCard } from './study-package-prompt-card'
+import { MaterialPagesDialog } from './material-pages-dialog'
+import { compareMaterials } from '@/lib/materials'
+import { useState } from 'react'
+import type { StudyDocument } from '@/lib/types'
 
 export function StudyView() {
+  const [pageDocument, setPageDocument] = useState<StudyDocument | null>(null)
   const docs = useDocuments()
   const exams = useExams()
   const logs = useStudyLogs()
@@ -67,20 +72,27 @@ export function StudyView() {
         <section>
           <h2 className="mb-4 font-semibold">Documenti</h2>
           <div className="grid gap-4 lg:grid-cols-2">
-            {docs.data.map((d) => (
+            {[...docs.data].sort(compareMaterials).map((d) => (
               <article key={d.id} className="space-y-4 rounded-2xl border border-border bg-card p-5">
                 <p className="text-xs text-muted-foreground">
                   {exams.data?.find((e) => e.id === d.examId)?.name}
                 </p>
                 <h3 className="font-medium">{d.name}</h3>
-                <LinearProgress variant="determinate" value={(100 * d.pagesRead) / Math.max(1, d.studyablePages)} />
+                <LinearProgress
+                  variant="determinate"
+                  value={(100 * d.pagesRead) / Math.max(1, d.studyablePages)}
+                />
                 <p className="text-sm text-muted-foreground">
                   {d.pagesRead} / {d.studyablePages} pagine didattiche · ultima posizione: {d.lastPage}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {d.pages} pagine nel PDF · {d.pages - d.studyablePages} escluse dal piano
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button component={Link} href={studyHref(d.id, null, d.lastPage)} variant="outlined">
                     Apri documento
                   </Button>
+                  <Button onClick={() => setPageDocument(d)}>Pagine da studiare</Button>
                   <Button component={Link} href={`/quiz?exam=${d.examId}`}>
                     Quiz
                   </Button>
@@ -112,6 +124,7 @@ export function StudyView() {
           </ul>
         </section>
       </div>
+      <MaterialPagesDialog document={pageDocument} onClose={() => setPageDocument(null)} />
     </PageContainer>
   )
 }

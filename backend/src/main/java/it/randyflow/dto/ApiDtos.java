@@ -8,7 +8,9 @@ public final class ApiDtos { private ApiDtos() {}
  public record ExamDto(String id,String name,String shortName,LocalDate date,String description,int totalSlides,int slidesCompleted,int minutesStudied,String status,List<String> documentIds,int reviewDays,List<LocalDate> unavailableDays,Map<Integer,Integer> availability,LocalDate createdAt) {}
  public record NewExam(@NotBlank String name,@NotNull LocalDate date,String description,@NotNull List<DocumentInput> documents,@NotNull Map<Integer,Integer> availability,@NotNull List<LocalDate> unavailableDays,@Min(0) int reviewDays) {}
  public record DocumentInput(@NotBlank String name,@Min(1) int pages) {}
- public record MaterialDto(String id,String examId,String name,String kind,int pages,int studyablePages,int lastPage,int pagesRead,List<Chapter> chapters,LocalDate updatedAt,String sizeLabel) {}
+ public record MaterialDto(String id,String examId,String name,String kind,int pages,int studyablePages,int lastPage,int pagesRead,List<Chapter> chapters,LocalDate updatedAt,String sizeLabel,boolean hasFile,boolean analyzed,List<PageInfo> pageSelection) {}
+ public record PageInfo(int page,String type,boolean studyable,String source) {}
+ public record PageSelectionInput(Boolean studyable) {}
  public record Chapter(String title,int from,int to) {}
  public record Position(@Min(1) int page) {}
  public record Completion(String sessionId) {}

@@ -2,6 +2,10 @@
 
 Restituisci esclusivamente un singolo oggetto JSON valido, senza blocchi Markdown, commenti o testo introduttivo. Il file sarà salvato con estensione .study.
 
+SE ALLEGO PIU FILE
+Crea un materiale distinto per ogni PDF, mantenendo in materials.name il nome esatto del file allegato e in pageCount il suo numero reale di pagine. Non unire le dispense e non continuare la numerazione da un file all'altro: ogni PDF riparte da pagina 1. Usa materialId distinti e collega ogni topic esclusivamente al PDF dal quale proviene.
+Per slideRange e slideRefs usa la posizione fisica nel PDF, contando anche copertina e indice. Ignora la numerazione stampata nel piede della pagina, che potrebbe iniziare dopo la copertina. Non rinominare i file e non scambiare i capitoli tra le dispense.
+
 CONTROLLO VISIVO E TESTUALE OBBLIGATORIO
 1. Conta le pagine reali e crea internamente un inventario numerato da 1 a pageCount.
 2. Esamina ogni pagina usando sia il testo estratto sia la resa visiva completa: titoli, immagini, diagrammi, formule, tabelle, densità e impaginazione.
