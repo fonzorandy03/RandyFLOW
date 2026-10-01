@@ -11,7 +11,7 @@ public final class ApiDtos { private ApiDtos() {}
  }
  public record PlanSettings(@NotNull LocalDate startDate,@NotNull List<@NotNull LocalDate> unavailableDays,@Min(0) int reviewDays) {}
  public record DocumentInput(@NotBlank String name,@Min(1) int pages) {}
- public record MaterialDto(String id,String examId,String name,String kind,int pages,int studyablePages,int lastPage,int pagesRead,List<Chapter> chapters,LocalDate updatedAt,String sizeLabel,boolean hasFile,boolean analyzed,List<PageInfo> pageSelection,Integer studyOrder) {}
+ public record MaterialDto(String id,String examId,String name,String kind,int pages,int studyablePages,int lastPage,int pagesRead,List<Chapter> chapters,LocalDate updatedAt,String sizeLabel,boolean hasFile,boolean analyzed,List<PageInfo> pageSelection,Integer studyOrder,List<Integer> completedPages) {}
  public record PageInfo(int page,String type,boolean studyable,String source) {}
  public record MaterialOrderInput(@NotNull List<String> materialIds) {}
  public record PageSelectionInput(Boolean studyable) {}

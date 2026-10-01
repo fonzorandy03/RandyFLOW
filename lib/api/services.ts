@@ -250,7 +250,7 @@ export const planApi = {
   /** Marks a session as skipped or partially completed and redistributes the rest of the material. */
   reportSession: (
     sessionId: string,
-    outcome: 'completed' | 'partial' | 'skipped',
+    outcome: 'completed' | 'partial' | 'skipped' | 'planned',
     slidesDone?: number,
   ): Promise<{ session: StudySession; adjustment: PlanAdjustment | null }> => {
     if (!USE_MOCKS) return http.post(`/sessions/${sessionId}/report`, { outcome, slidesDone })
@@ -262,12 +262,31 @@ export const planApi = {
       const total = session.slideTo - session.slideFrom + 1
       const done =
         outcome === 'completed' ? total : outcome === 'skipped' ? 0 : Math.min(total, slidesDone ?? 0)
+      const doc =
+        documents.find((d) => d.id === session.materialId) ??
+        documents.find((d) => d.examId === session.examId)
+      const wasSkipped = session.status === 'skipped'
+      if (doc) {
+        let pages = reading[doc.id] ?? Array.from({ length: doc.pagesRead }, (_, i) => i + 1)
+        if (outcome !== 'skipped' && !(outcome === 'planned' && wasSkipped)) {
+          pages = pages.filter((p) => p < session.slideFrom! || p > session.slideTo!)
+          for (let n = 0; n < (outcome === 'planned' ? 0 : done); n++) pages.push(session.slideFrom + n)
+        }
+        reading[doc.id] = pages
+        doc.completedPages = [...pages]
+        doc.pagesRead = pages.length
+        exam.slidesCompleted = documents
+          .filter((d) => d.examId === exam.id)
+          .reduce((sum, d) => sum + d.pagesRead, 0)
+      }
       session.status = outcome === 'skipped' ? 'skipped' : outcome
-      session.slidesDone = done
+      session.slidesDone = doc
+        ? (reading[doc.id] ?? []).filter((p) => p >= session.slideFrom! && p <= session.slideTo!).length
+        : done
       session.tasks.forEach((t) => {
         if (t.kind === 'read' || t.kind === 'quiz') t.done = outcome === 'completed'
       })
-      if (outcome === 'completed') return { session, adjustment: null }
+      if (outcome === 'completed' || outcome === 'planned') return { session, adjustment: null }
 
       const missing = total - done
       const affected = redistribute(exam, session.date, session.slideFrom + done)
@@ -375,6 +394,39 @@ export const studyApi = {
             .map((s) => ({ page: s.number, title: s.title }))
         }, 80)
       : http.get(`/documents/${id}/search?q=${encodeURIComponent(query)}`),
+  uncompletePage: (id: string, page: number): Promise<void> =>
+    USE_MOCKS
+      ? mockResponse(() => {
+          const doc = documents.find((d) => d.id === id)
+          if (!doc) throw new Error('Documento non trovato')
+          reading[id] = (reading[id] ?? Array.from({ length: doc.pagesRead }, (_, i) => i + 1)).filter(
+            (p) => p !== page,
+          )
+          doc.completedPages = reading[id]
+          doc.pagesRead = reading[id].length
+          db.sessions
+            .filter(
+              (s) =>
+                (s.materialId === id || (!s.materialId && s.examId === doc.examId)) &&
+                s.slideFrom !== undefined &&
+                page >= s.slideFrom &&
+                page <= s.slideTo!,
+            )
+            .forEach((s) => {
+              s.slidesDone = reading[id].filter((p) => p >= s.slideFrom! && p <= s.slideTo!).length
+              s.nextPage = page
+              if (s.status === 'completed') s.status = 'planned'
+              s.tasks
+                .filter((t) => t.kind === 'read' || t.kind === 'concepts')
+                .forEach((t) => {
+                  t.done = false
+                })
+            })
+          findExam(doc.examId).slidesCompleted = documents
+            .filter((d) => d.examId === doc.examId)
+            .reduce((sum, d) => sum + d.pagesRead, 0)
+        })
+      : http.delete(`/documents/${id}/pages/${page}/complete`),
   completePage: (id: string, page: number, sessionId?: string): Promise<void> =>
     USE_MOCKS
       ? mockResponse(() => {
@@ -384,6 +436,7 @@ export const studyApi = {
           const pages = (reading[id] ??= Array.from({ length: doc.pagesRead }, (_, i) => i + 1))
           if (!pages.includes(page)) {
             pages.push(page)
+            doc.completedPages = [...pages]
             doc.pagesRead = pages.length
             const exam = findExam(doc.examId)
             exam.slidesCompleted = documents

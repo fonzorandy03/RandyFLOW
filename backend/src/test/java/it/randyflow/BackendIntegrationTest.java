@@ -36,7 +36,7 @@ class BackendIntegrationTest {
     core.complete(doc.id(),1,null);
     var blocked = java.util.List.of(start,start.plusDays(1),start.plusDays(7));
     var updated = planner.settings(exam.id(),new it.randyflow.dto.ApiDtos.PlanSettings(start,blocked,3));
-    var sessions = planner.sessions(exam.id());
+    var sessions = planner.sessions(exam.id()).stream().filter(s -> "planned".equals(s.status())).toList();
     assertThat(updated.unavailableDays()).containsExactlyElementsOf(blocked);
     assertThat(updated.reviewDays()).isEqualTo(3);
     assertThat(sessions).allSatisfy(s -> {assertThat(blocked).doesNotContain(s.date());assertThat(s.date()).isAfterOrEqualTo(start);});
@@ -45,6 +45,27 @@ class BackendIntegrationTest {
     assertThat(core.material(doc.id()).studyOrder()).isEqualTo(doc.studyOrder());
     assertThatThrownBy(() -> planner.settings(exam.id(),new it.randyflow.dto.ApiDtos.PlanSettings(exam.date(),java.util.List.of(),3))).isInstanceOf(ApiException.class);
     assertThat(core.exam(exam.id()).unavailableDays()).containsExactlyElementsOf(blocked);
+  }
+  @Test void completionCanBeUndoneAndSkippedDayMovesOnlyUnreadPages() {
+    var today=java.time.LocalDate.now(java.time.ZoneId.of("Europe/Rome"));
+    var exam=core.create(new it.randyflow.dto.ApiDtos.NewExam("Correzioni",today.plusDays(12),"",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("Dispensa.pdf",24)),java.util.Map.of(1,60,2,60,3,60,4,60,5,60,6,60,7,60),java.util.List.of(),2,today));
+    var doc=core.materials().stream().filter(d->d.examId().equals(exam.id())).findFirst().orElseThrow();
+    var session=planner.sessions(exam.id()).get(0);
+    core.complete(doc.id(),session.slideFrom(),null);
+    planner.report(session.id(),"skipped",null);
+    assertThat(core.material(doc.id()).completedPages()).contains(session.slideFrom());
+    assertThat(core.exam(exam.id()).unavailableDays()).contains(today);
+    assertThat(planner.sessions(exam.id()).stream().filter(s->"planned".equals(s.status())).toList()).allSatisfy(s->assertThat(s.date()).isAfter(today));
+    planner.report(session.id(),"planned",null);
+    assertThat(core.exam(exam.id()).unavailableDays()).doesNotContain(today);
+    assertThat(core.material(doc.id()).pagesRead()).isEqualTo(1);
+    var next=planner.sessions(exam.id()).stream().filter(s->"planned".equals(s.status())).findFirst().orElseThrow();
+    planner.report(next.id(),"completed",null);
+    assertThat(core.material(doc.id()).completedPages()).contains(next.slideFrom());
+    core.uncomplete(doc.id(),next.slideFrom());
+    assertThat(core.material(doc.id()).completedPages()).doesNotContain(next.slideFrom());
+    assertThat(core.exam(exam.id()).slidesCompleted()).isEqualTo(core.material(doc.id()).pagesRead());
+    assertThat(planner.sessions(exam.id()).stream().filter(s->"planned".equals(s.status())).toList()).anySatisfy(s->assertThat(next.slideFrom()).isBetween(s.slideFrom(),s.slideTo()));
   }
   @Autowired StudyPackageService packages;
   @Autowired CoreService core;

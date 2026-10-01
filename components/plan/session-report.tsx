@@ -9,7 +9,7 @@ import { planApi } from '@/lib/api/services'
 import { refreshPlanData } from '@/lib/hooks'
 import type { StudySession } from '@/lib/types'
 
-type Outcome = 'completed' | 'partial' | 'skipped'
+type Outcome = 'completed' | 'partial' | 'skipped' | 'planned'
 
 export function SessionReport({ session, onDone }: { session: StudySession; onDone?: () => void }) {
   const toast = useToast()
@@ -25,7 +25,17 @@ export function SessionReport({ session, onDone }: { session: StudySession; onDo
     try {
       const { adjustment } = await planApi.reportSession(session.id, outcome, slides)
       await refreshPlanData()
-      toast(adjustment ? adjustment.message : 'Sessione completata. Ottimo lavoro.')
+      toast(
+        adjustment
+          ? adjustment.message
+          : outcome === 'skipped'
+            ? 'Giorno escluso: le pagine da studiare sono state ripianificate.'
+            : outcome === 'planned'
+              ? 'Sessione ripristinata. Piano aggiornato.'
+              : outcome === 'partial'
+                ? 'Progressi aggiornati. Piano ricalcolato.'
+                : 'Sessione completata. Ottimo lavoro.',
+      )
       onDone?.()
     } catch {
       toast('Non siamo riusciti a salvare. Riprova.', 'info')
@@ -70,6 +80,11 @@ export function SessionReport({ session, onDone }: { session: StudySession; onDo
 
   return (
     <div className="flex flex-wrap gap-2">
+      {['completed', 'partial', 'skipped'].includes(session.status) && (
+        <Button variant="outlined" size="small" disabled={!!busy} onClick={() => report('planned')}>
+          {session.status === 'skipped' ? 'Ripristina il giorno di studio' : 'Annulla completamento'}
+        </Button>
+      )}
       <Button
         variant="contained"
         size="small"
@@ -97,7 +112,7 @@ export function SessionReport({ session, onDone }: { session: StudySession; onDo
         disabled={!!busy}
         startIcon={<CircleSlash className="size-4" />}
       >
-        {busy === 'skipped' ? 'Riorganizzo…' : 'Saltata'}
+        {busy === 'skipped' ? 'Riorganizzo…' : 'Non studio questo giorno'}
       </Button>
     </div>
   )

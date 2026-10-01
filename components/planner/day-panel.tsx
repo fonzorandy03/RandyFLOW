@@ -28,7 +28,7 @@ export function DayPanel({
     session &&
     date <= today &&
     session.slideFrom !== undefined &&
-    ['planned', 'rescheduled'].includes(session.status)
+    ['planned', 'rescheduled', 'completed', 'partial', 'skipped'].includes(session.status)
   const docId = session?.materialId ?? (exam.documentIds.length === 1 ? exam.documentIds[0] : undefined)
 
   return (

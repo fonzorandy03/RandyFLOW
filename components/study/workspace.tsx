@@ -78,7 +78,7 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [completed, setCompleted] = useState<number[]>([])
+  const [completed, setCompleted] = useState<number[]>(doc.completedPages ?? [])
   const [pdfUrl, setPdfUrl] = useState('')
   const [pdfError, setPdfError] = useState(false)
   const [pdfAttempt, setPdfAttempt] = useState(0)
@@ -192,13 +192,32 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
     if (pageInput.trim()) go(Number(pageInput))
     else setPageInput(String(page))
   }
+  useEffect(() => {
+    setCompleted(doc.completedPages ?? [])
+  }, [doc.completedPages])
+  const undo = async () => {
+    if (savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    try {
+      await studyApi.uncompletePage(doc.id, page)
+      setCompleted((value) => value.filter((n) => n !== page))
+      await refreshPlanData()
+      toast('Pagina rimessa da studiare. Piano aggiornato.')
+    } catch {
+      setError('Modifica non salvata. Riprova.')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
+  }
   const complete = async () => {
     if (savingRef.current) return
     savingRef.current = true
     setSaving(true)
     setError('')
     try {
-      await studyApi.completePage(doc.id, page, session?.id)
+      await studyApi.completePage(doc.id, page)
       setCompleted((value) => (value.includes(page) ? value : [...value, page]))
       await refreshPlanData()
       toast(
@@ -600,6 +619,11 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
             )}
           </div>
           <footer className="reader-footer">
+            {completed.includes(page) && (
+              <button className="study-action" disabled={saving} onClick={() => void undo()}>
+                Segna da studiare
+              </button>
+            )}
             <div className="min-w-0">
               <p className="truncate text-xs font-medium">{chapter?.title ?? `Pagina ${page}`}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
@@ -752,6 +776,11 @@ function WorkspaceContent({ document: doc }: { document: StudyDocument }) {
               )}
             </div>
             <div className="assistant-footer">
+              {completed.includes(page) && (
+                <button className="study-action mb-3" disabled={saving} onClick={() => void undo()}>
+                  Pagina completata ? Segna da studiare
+                </button>
+              )}
               <button
                 className="study-complete mb-3"
                 disabled={saving || (page >= doc.pages && !isStudyable)}
@@ -834,7 +863,9 @@ function AssistantContent({
           (topic.explanations[key].trim().split(/\s+/).length < 100 ||
             /[\u0000-\u0008\u000b\u000c\u000e-\u001f]|(?:…|\.\.\.)\s*$/.test(topic.explanations[key])) && (
             <details className="explanation-quality-note">
-              <summary className="cursor-pointer text-xs font-medium">Nota sulla completezza del testo importato</summary>
+              <summary className="cursor-pointer text-xs font-medium">
+                Nota sulla completezza del testo importato
+              </summary>
               <p>
                 Questa spiegazione importata sembra abbreviata o poco curata. Per una lezione completa,
                 rigenera il file .study con il nuovo prompt e aggiorna questa dispensa.

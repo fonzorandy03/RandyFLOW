@@ -20,6 +20,7 @@ import { MasteryIndicator } from '@/components/common/mastery-indicator'
 import { SectionTitle } from '@/components/common/page-header'
 import { ProgressRing } from '@/components/common/progress-ring'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/common/states'
+import { SessionReport } from '@/components/plan/session-report'
 import { ExamStatusLabel, SessionStatusBadge } from '@/components/common/status-badge'
 import { PlanSettingsDialog } from '@/components/plan/plan-settings-dialog'
 import { useCurrentDate } from '@/lib/use-current-date'
@@ -261,7 +262,7 @@ export function ExamDetail({ id }: { id: string }) {
               ) : (
                 <ol className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-card">
                   {upcoming.map((s) => (
-                    <li key={s.id} className="flex items-center gap-4 px-4 py-3.5">
+                    <li key={s.id} className="flex flex-wrap items-center gap-4 px-4 py-3.5">
                       <div className="w-20 shrink-0">
                         <p className="text-sm font-medium capitalize">{relativeDay(s.date)}</p>
                         <p className="text-xs text-muted-foreground">{formatDay(s.date)}</p>
@@ -288,6 +289,16 @@ export function ExamDetail({ id }: { id: string }) {
                         {formatDuration(s.durationMin)}
                       </span>
                       <SessionStatusBadge status={s.status} />
+                      {s.slideFrom !== undefined && (
+                        <details className="w-full border-t border-border pt-2">
+                          <summary className="cursor-pointer text-xs font-medium text-primary">
+                            Aggiorna o correggi la sessione
+                          </summary>
+                          <div className="pt-3">
+                            <SessionReport session={s} />
+                          </div>
+                        </details>
+                      )}
                     </li>
                   ))}
                 </ol>
