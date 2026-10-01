@@ -28,7 +28,7 @@ import { compareMaterials } from '@/lib/materials'
 import { topicForSlide } from '@/lib/study-package'
 import type { StudyDocument } from '@/lib/types'
 import { ErrorState, LoadingState } from '../common/states'
-import { MarkdownContent } from '../common/markdown-content'
+import { LessonContent } from './lesson-content'
 import { useToast } from '../common/toast'
 import { useShell } from '../layout/shell-context'
 import { SlideContent } from './slide-content'
@@ -833,15 +833,16 @@ function AssistantContent({
         {topic.studyable &&
           (topic.explanations[key].trim().split(/\s+/).length < 100 ||
             /[\u0000-\u0008\u000b\u000c\u000e-\u001f]|(?:…|\.\.\.)\s*$/.test(topic.explanations[key])) && (
-            <div className="explanation-quality-note">
+            <details className="explanation-quality-note">
+              <summary className="cursor-pointer text-xs font-medium">Nota sulla completezza del testo importato</summary>
               <p>
                 Questa spiegazione importata sembra abbreviata o poco curata. Per una lezione completa,
                 rigenera il file .study con il nuovo prompt e aggiorna questa dispensa.
               </p>
               <Link href="/studio">Migliora i contenuti →</Link>
-            </div>
+            </details>
           )}
-        <MarkdownContent>{topic.explanations[key]}</MarkdownContent>
+        <LessonContent text={topic.explanations[key]} />
         <SlideRefs refs={refs} go={go} />
       </div>
     )
@@ -849,7 +850,7 @@ function AssistantContent({
   if (tab === 'Riassunto')
     return (
       <div>
-        <MarkdownContent>{topic.summary}</MarkdownContent>
+        <LessonContent text={topic.summary} />
         <SlideRefs refs={refs} go={go} />
       </div>
     )
@@ -858,7 +859,7 @@ function AssistantContent({
       <ul className="space-y-3">
         {topic.keyConcepts.map((item) => (
           <li key={item} className="rounded-xl bg-muted p-3 text-sm">
-            {item}
+            <LessonContent text={item} />
           </li>
         ))}
       </ul>
@@ -868,7 +869,7 @@ function AssistantContent({
       <ol className="list-decimal space-y-3 pl-5">
         {topic.examples.map((item) => (
           <li key={item} className="text-sm leading-6">
-            {item}
+            <LessonContent text={item} />
           </li>
         ))}
       </ol>
