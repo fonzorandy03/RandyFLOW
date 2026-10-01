@@ -1141,3 +1141,11 @@
     font-size: 12px;
   }
 }
+
+.assistant-heading > div:first-child { display: none; }
+.assistant-heading { padding: 12px 18px; }
+.assistant-context { margin-top: 0; }
+.assistant-tabs { display: flex; overflow-x: auto; flex-shrink: 0; }
+.assistant-tabs button { flex: 1; min-width: 78px; white-space: nowrap; padding: 9px 6px; }
+.study-session-bar > div:first-child > p:last-child { display: none; }
+.reading-explanation .assistant-content { padding-top: 12px; }
