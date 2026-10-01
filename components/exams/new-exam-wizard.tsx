@@ -171,7 +171,7 @@ export function NewExamWizard() {
             <>
               <StepIntro
                 title="Carica il materiale"
-                text="PDF o slide del corso. Useremo il numero di pagine per distribuire lo studio."
+                text="Carica i PDF e scegli in quale ordine studiarli. Il piano seguirà la tua scelta."
               />
               <MaterialStep documents={draft.documents} onChange={(documents) => update({ documents })} />
             </>
@@ -217,7 +217,15 @@ export function NewExamWizard() {
                           : 'border-border bg-card hover:border-primary/40',
                       )}
                     >
-                      {n === 0 ? 'Nessuno' : n === 7 ? '1 settimana' : n === 14 ? '2 settimane' : n === 21 ? '3 settimane' : n}
+                      {n === 0
+                        ? 'Nessuno'
+                        : n === 7
+                          ? '1 settimana'
+                          : n === 14
+                            ? '2 settimane'
+                            : n === 21
+                              ? '3 settimane'
+                              : n}
                     </button>
                   ))}
                 </div>

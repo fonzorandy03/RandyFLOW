@@ -4,6 +4,7 @@ import { FileText, Trash2, Upload } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { studyApi } from '@/lib/api/services'
+import { MaterialOrderControls, moveMaterial } from '@/components/study/material-order-controls'
 
 export interface DraftDocument {
   id: string
@@ -42,7 +43,13 @@ export function MaterialStep({
           .filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
           .map(async (f) => {
             const inspected = await studyApi.inspectPdf(f)
-            return { id: `${f.name}-${f.size}-${Date.now()}`, name: f.name, pages: inspected.pages, sizeLabel: sizeLabel(f.size), file: f }
+            return {
+              id: `${f.name}-${f.size}-${Date.now()}`,
+              name: f.name,
+              pages: inspected.pages,
+              sizeLabel: sizeLabel(f.size),
+              file: f,
+            }
           }),
       )
       onChange([...documents, ...added])
@@ -100,7 +107,11 @@ export function MaterialStep({
           }}
         />
       </label>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       {documents.length === 0 ? (
         <button
@@ -111,28 +122,41 @@ export function MaterialStep({
           Non hai un PDF a portata di mano? Usa un file di esempio
         </button>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {documents.map((d) => (
-            <li key={d.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-              <FileText className="size-5 shrink-0 text-primary" aria-hidden />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium">{d.name}</span>
-                <span className="text-xs text-muted-foreground">{d.sizeLabel}</span>
-              </div>
-              <span className="tabular rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-                {d.pages} pagine
-              </span>
-              <button
-                type="button"
-                onClick={() => onChange(documents.filter((x) => x.id !== d.id))}
-                className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label={`Rimuovi ${d.name}`}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            Ordine di studio: usa le frecce per scegliere quale dispensa studiare prima. Il piano seguirà
+            questo ordine.
+          </p>
+          <ul className="flex flex-col gap-2" aria-label="Ordine di studio delle dispense">
+            {documents.map((d, index) => (
+              <li key={d.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
+                <FileText className="size-5 shrink-0 text-primary" aria-hidden />
+                <MaterialOrderControls
+                  name={d.name}
+                  index={index}
+                  total={documents.length}
+                  disabled={reading}
+                  onMove={(direction) => onChange(moveMaterial(documents, index, direction))}
+                />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium">{d.name}</span>
+                  <span className="text-xs text-muted-foreground">{d.sizeLabel}</span>
+                </div>
+                <span className="tabular rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  {d.pages} pagine
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onChange(documents.filter((x) => x.id !== d.id))}
+                  className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={`Rimuovi ${d.name}`}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   )

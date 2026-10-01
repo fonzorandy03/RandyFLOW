@@ -7,5 +7,6 @@ import jakarta.persistence.*; import java.time.LocalDate;
  @Column(name="storage_path") public String storagePath; @Column(name="mime_type") public String mimeType; @Column(name="file_size") public Long fileSize; @Column(name="updated_at") public LocalDate updatedAt;
  @Column(name="page_types_json",columnDefinition="TEXT") public String pageTypesJson;
  @Column(name="page_overrides_json",columnDefinition="TEXT") public String pageOverridesJson="{}";
+ @Column(name="study_order") public Integer studyOrder;
  public StudyMaterialEntity() {}
 }

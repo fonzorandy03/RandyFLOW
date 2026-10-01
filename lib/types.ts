@@ -85,6 +85,7 @@ export interface StudyDocument {
   chapters: Chapter[]
   updatedAt: ISODate
   sizeLabel: string
+  studyOrder?: number | null
   hasFile?: boolean
   analyzed?: boolean
   pageSelection?: { page: number; type: string; studyable: boolean; source: string }[]

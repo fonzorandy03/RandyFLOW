@@ -87,6 +87,22 @@ export const userApi = {
 }
 
 export const examsApi = {
+  reorderMaterials: (id: string, materialIds: string[]): Promise<StudyDocument[]> => {
+    if (!USE_MOCKS) return http.patch(`/exams/${id}/materials/order`, { materialIds })
+    return mockResponse(() => {
+      const docs = documents.filter((d) => d.examId === id)
+      if (
+        docs.length !== materialIds.length ||
+        new Set(materialIds).size !== docs.length ||
+        docs.some((d) => !materialIds.includes(d.id))
+      )
+        throw new Error('Ordine non valido')
+      docs.forEach((d) => {
+        d.studyOrder = materialIds.indexOf(d.id)
+      })
+      return docs.sort((a, b) => (a.studyOrder ?? 0) - (b.studyOrder ?? 0))
+    })
+  },
   list: (): Promise<Exam[]> => (USE_MOCKS ? mockResponse(() => db.exams) : http.get('/exams')),
   get: (id: string): Promise<Exam> =>
     USE_MOCKS ? mockResponse(() => findExam(id)) : http.get(`/exams/${id}`),

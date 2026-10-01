@@ -16,6 +16,7 @@ public final class MaterialOrder {
     catch (NumberFormatException ignored) { return Integer.MAX_VALUE; }
   }
   public static final Comparator<StudyMaterialEntity> COMPARATOR = Comparator
-      .comparingInt((StudyMaterialEntity m) -> firstNumber(m.name))
+      .comparingInt((StudyMaterialEntity m) -> m.studyOrder == null ? Integer.MAX_VALUE : m.studyOrder)
+      .thenComparingInt(m -> firstNumber(m.name))
       .thenComparing(m -> m.name.toLowerCase(Locale.ROOT)).thenComparing(m -> m.id);
 }

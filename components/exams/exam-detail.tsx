@@ -32,7 +32,8 @@ import {
   formatLong,
   relativeDay,
 } from '@/lib/date'
-import { useAdjustments, useDocuments, useExams, useMastery, useSessions } from '@/lib/hooks'
+import { useAdjustments, useDocuments, useExams, useMastery, useSessions, refreshPlanData } from '@/lib/hooks'
+import { MaterialOrderControls, moveMaterial } from '../study/material-order-controls'
 import { studyHref } from '@/lib/routes'
 import { compareMaterials } from '@/lib/materials'
 import { MaterialPagesDialog } from '../study/material-pages-dialog'
@@ -48,6 +49,8 @@ export function ExamDetail({ id }: { id: string }) {
   const { data: adjustments } = useAdjustments()
   const [availabilityOpen, setAvailabilityOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [ordering, setOrdering] = useState(false)
+  const [orderError, setOrderError] = useState('')
   const [pageDocument, setPageDocument] = useState<StudyDocument | null>(null)
   const router = useRouter()
   useEffect(() => {
@@ -89,6 +92,21 @@ export function ExamDetail({ id }: { id: string }) {
 
   const pct = exam.totalSlides ? exam.slidesCompleted / exam.totalSlides : 0
   const docs = documents?.filter((d) => d.examId === id).sort(compareMaterials) ?? []
+  const reorder = async (index: number, direction: -1 | 1) => {
+    setOrdering(true)
+    setOrderError('')
+    try {
+      await examsApi.reorderMaterials(
+        id,
+        moveMaterial(docs, index, direction).map((d) => d.id),
+      )
+      await refreshPlanData()
+    } catch (cause) {
+      setOrderError(cause instanceof Error ? cause.message : 'Ordine non aggiornato. Riprova.')
+    } finally {
+      setOrdering(false)
+    }
+  }
   const upcoming = (sessions ?? []).filter((s) => s.date >= TODAY && s.status !== 'unavailable').slice(0, 6)
   const todaySession = sessions?.find((s) => s.date === TODAY)
   const continueDoc = docs.find((doc) => doc.id === todaySession?.materialId) ?? docs[0]
@@ -250,6 +268,18 @@ export function ExamDetail({ id }: { id: string }) {
               <ul className="flex flex-col gap-3">
                 {docs.map((d, index) => (
                   <li key={d.id}>
+                    <div className="mb-2 flex items-center justify-between px-1">
+                      <span className="text-xs text-muted-foreground">
+                        {ordering ? 'Aggiornamento del piano…' : 'Ordine di studio'}
+                      </span>
+                      <MaterialOrderControls
+                        name={d.name}
+                        index={index}
+                        total={docs.length}
+                        disabled={ordering}
+                        onMove={(direction) => void reorder(index, direction)}
+                      />
+                    </div>
                     <Link
                       href={studyHref(d.id, null, d.lastPage)}
                       className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/30"
@@ -288,6 +318,11 @@ export function ExamDetail({ id }: { id: string }) {
                   </li>
                 ))}
               </ul>
+              {orderError && (
+                <p role="alert" className="mt-3 text-sm text-destructive">
+                  {orderError}
+                </p>
+              )}
             </section>
           </div>
 

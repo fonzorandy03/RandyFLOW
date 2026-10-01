@@ -41,6 +41,14 @@ export function PlanPreview({ draft }: { draft: ExamDraft }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <p className="text-sm font-medium">Ordine di studio scelto</p>
+        <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-muted-foreground">
+          {draft.documents.map((document) => (
+            <li key={document.id}>{document.name}</li>
+          ))}
+        </ol>
+      </div>
       <dl className="grid grid-cols-3 gap-4 rounded-2xl border border-border bg-card p-5">
         <div className="flex flex-col gap-1">
           <dt className="text-xs text-muted-foreground">Sessioni</dt>

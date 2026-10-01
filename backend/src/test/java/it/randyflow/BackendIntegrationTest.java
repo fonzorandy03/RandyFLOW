@@ -149,6 +149,12 @@ class BackendIntegrationTest {
         new it.randyflow.dto.ApiDtos.DocumentInput("ISTA_Dispensa_Capitoli_1-4.pdf",4)),java.util.Map.of(1,60,2,60,3,60,4,60,5,60,6,60),java.util.List.of(),2));
     var second = core.upload(exam.id(),new MockMultipartFile("file","dispensa_ISTA_Cap5-8.pdf","application/pdf",dispensaPdf()));
     var first = core.upload(exam.id(),new MockMultipartFile("file","ISTA_Dispensa_Capitoli_1-4.pdf","application/pdf",dispensaPdf()));
+    assertThat(planner.sessions(exam.id()).get(0).materialId()).isEqualTo(second.id());
+    assertThatThrownBy(() -> core.reorder(exam.id(),java.util.List.of(first.id(),first.id()))).isInstanceOf(ApiException.class);
+    assertThatThrownBy(() -> core.reorder(exam.id(),java.util.List.of(first.id(),"foreign-document"))).isInstanceOf(ApiException.class);
+    assertThat(planner.sessions(exam.id()).get(0).materialId()).isEqualTo(second.id());
+    assertThat(core.reorder(exam.id(),java.util.List.of(first.id(),second.id()))).extracting(it.randyflow.dto.ApiDtos.MaterialDto::id).containsExactly(first.id(),second.id());
+    assertThat(core.material(first.id()).studyOrder()).isEqualTo(0);
     assertThat(first.studyablePages()).isEqualTo(2);
     assertThat(first.pageSelection()).filteredOn(p -> !p.studyable()).extracting(it.randyflow.dto.ApiDtos.PageInfo::page).containsExactly(1,2);
     var plan = planner.sessions(exam.id());
