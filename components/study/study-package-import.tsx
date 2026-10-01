@@ -191,7 +191,7 @@ export function StudyPackageImport({ exams }: { exams: Exam[] }) {
           <strong className="text-foreground">
             {documents.data?.find((doc) => doc.id === editDocument)?.name}
           </strong>
-          . Per aggiornare un package esistente mantieni lo stesso packageId e aumenta la revisione.
+          . I contenuti delle altre dispense e i tuoi progressi saranno conservati.
         </p>
       )}
       <input

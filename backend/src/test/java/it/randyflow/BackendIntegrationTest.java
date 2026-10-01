@@ -243,4 +243,22 @@ class BackendIntegrationTest {
     assertThat(core.exams()).isEmpty();
     assertThatThrownBy(()->core.exam(created.id())).isInstanceOf(ApiException.class);
   }
+  @Test void addsAnotherDispensaAndUpdatesOnlyItsContents() throws Exception {
+    var exam=core.create(new it.randyflow.dto.ApiDtos.NewExam("Two PDFs",java.time.LocalDate.now().plusMonths(2),"",java.util.List.of(new it.randyflow.dto.ApiDtos.DocumentInput("first.pdf",6),new it.randyflow.dto.ApiDtos.DocumentInput("second.pdf",6)),java.util.Map.of(1,120),java.util.List.of(),7));
+    String first=exam.documentIds().get(0),second=exam.documentIds().get(1);
+    var original=packages.preview(example()).studyPackage();
+    packages.importPackage(original,exam.id(),new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(java.util.Map.of("economia-slide",first)));
+    core.complete(first,4,null);
+    var incoming=packages.preview(example().replace("economia","seconda")).studyPackage();
+    packages.importPackage(incoming,exam.id(),new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(java.util.Map.of("seconda-slide",second)));
+    var merged=packages.getByExam(exam.id());
+    assertThat(merged.materials()).extracting(StudyPackageDto.Material::id).containsExactlyInAnyOrder(first,second);
+    assertThat(merged.topics()).hasSize(original.topics().size()+incoming.topics().size());
+    assertThat(core.material(first).pagesRead()).isEqualTo(1);
+    String updated=example().replace("economia","seconda").replace("\"revision\": 1","\"revision\": 2");
+    packages.importPackage(packages.preview(updated).studyPackage(),exam.id(),new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(java.util.Map.of("seconda-slide",second)));
+    assertThat(packages.getByExam(exam.id()).topics()).hasSize(merged.topics().size());
+    assertThat(core.material(first).pagesRead()).isEqualTo(1);
+  }
+
 }
