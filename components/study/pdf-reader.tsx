@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import { Download, FileWarning, LoaderCircle } from 'lucide-react'
+import { useLoadingIndicator } from '../common/loading-popup'
 
 export function PdfReader({
   url,
@@ -22,6 +23,7 @@ export function PdfReader({
   const [width, setWidth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  useLoadingIndicator(loading, `Prepariamo la pagina ${page} del PDF`)
   useEffect(() => {
     let active = true
     let task: ReturnType<typeof import('pdfjs-dist').getDocument> | undefined

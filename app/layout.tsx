@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
+import { LoadingPopup } from '@/components/common/loading-popup'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
@@ -39,7 +40,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="it" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
       <body className="antialiased">
         <InitColorSchemeScript attribute="class" defaultMode="system" />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <LoadingPopup />
+        </Providers>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

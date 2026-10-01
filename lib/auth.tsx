@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { http, setAuthToken, getAuthToken, USE_MOCKS } from './api/http'
 import type { Student } from './types'
 import { useSWRConfig } from 'swr'
+import { useLoadingIndicator } from '@/components/common/loading-popup'
 
 type Credentials = { email: string; password: string }
 type Registration = Credentials & { firstName: string; lastName: string }
@@ -89,6 +90,7 @@ export function useAuth() {
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  useLoadingIndicator(loading, 'Prepariamo il tuo account')
   const router = useRouter()
   useEffect(() => {
     if (!loading && !user) router.replace('/accedi')

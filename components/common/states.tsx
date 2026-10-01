@@ -4,6 +4,7 @@ import Button from '@mui/material/Button'
 import Skeleton from '@mui/material/Skeleton'
 import { CircleAlert as AlertCircle, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLoadingIndicator } from './loading-popup'
 
 interface EmptyStateProps {
   icon: LucideIcon
@@ -50,6 +51,7 @@ export function ErrorState({ onRetry, message }: { onRetry?: () => void; message
 }
 
 export function LoadingState({ label = 'Caricamento…' }: { label?: string }) {
+  useLoadingIndicator(true, label)
   return (
     <div className="flex items-center gap-3 py-10 text-sm text-muted-foreground" role="status">
       <span className="size-1.5 animate-pulse-soft rounded-full bg-primary" aria-hidden />
@@ -63,6 +65,7 @@ export function SkeletonBlock({ className, height = 20 }: { className?: string; 
 }
 
 export function PageSkeleton() {
+  useLoadingIndicator(true, 'Prepariamo la pagina')
   return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Caricamento">
       <div className="flex flex-col gap-2">
